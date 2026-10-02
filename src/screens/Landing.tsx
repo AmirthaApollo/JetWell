@@ -1,110 +1,99 @@
 import { useMemo } from 'react';
 import { useRouter } from '../router';
 import { useStore } from '../store/store';
-import { FlightArc } from '../components/FlightArc';
+import { FlightTicket } from '../components/FlightTicket';
 import { Icon } from '../components/Icon';
 import { buildPlan } from '../engine/planEngine';
 import { tripToInput } from '../store/seed';
 
 export function Landing() {
   const { navigate } = useRouter();
-  const { trips, setActive } = useStore();
+  const { trips, setActive, activeTrip, prefs } = useStore();
 
-  const demo = trips.find((t) => t.isDemo) ?? trips[0];
-  const plan = useMemo(() => (demo ? buildPlan(tripToInput(demo)) : null), [demo]);
+  const upcoming = useMemo(() => {
+    const now = Date.now();
+    if (activeTrip && new Date(activeTrip.arrivalISO).getTime() > now) return activeTrip;
+    const future = trips
+      .filter((t) => new Date(t.arrivalISO).getTime() > now)
+      .sort((a, b) => new Date(a.departureISO).getTime() - new Date(b.departureISO).getTime());
+    return future[0] ?? trips[0] ?? null;
+  }, [trips, activeTrip]);
+
+  const plan = useMemo(() => (upcoming ? buildPlan(tripToInput(upcoming)) : null), [upcoming]);
+
+  function openPlan() {
+    if (upcoming) setActive(upcoming.id);
+    navigate('itinerary');
+  }
+
+  function tryExample() {
+    const demo = trips.find((t) => t.isDemo) ?? trips[0];
+    if (demo) setActive(demo.id);
+    navigate('journey');
+  }
 
   return (
     <div className="landing">
-      <section className="hero">
-        <div>
-          <span className="pre">Tell us where you're going.</span>
+      <section className="flight-hero">
+        <div className="hero-copy">
+          <span className="pre">Your next trip</span>
           <h1>Land ready.</h1>
-          <p className="lede">
-            We'll plan your sleep, light and caffeine around the clock you're leaving and the one you're landing in.
-          </p>
+          <p className="lede">A recovery plan for your body clock when you cross time zones.</p>
           <div className="cta-row">
             <button className="btn btn-primary" onClick={() => navigate('plan')}>
               Plan my trip <Icon name="arrow" size={17} />
             </button>
-            <button
-              className="btn btn-ghost"
-              onClick={() => {
-                if (demo) setActive(demo.id);
-                navigate('itinerary');
-              }}
-            >
-              See an example
+            <button className="btn btn-ghost" onClick={openPlan}>
+              Open my plan
             </button>
           </div>
+          <button className="example-link" onClick={tryExample}>
+            Try an example: Delhi to London
+          </button>
         </div>
-        <div>
-          {plan && demo ? (
-            <FlightArc
-              originCode={demo.originCode}
-              destCode={demo.destCode}
-              originLabel={demo.originCity}
-              destLabel={demo.destCity}
-              shiftMinutes={plan.shiftMinutes}
-            />
-          ) : null}
-        </div>
-      </section>
-
-      <section>
-        <div className="section-head">
-          <h2>What you get</h2>
-        </div>
-        <div className="benefits">
-          <div className="benefit">
-            <div className="b-ico">
-              <Icon name="bed" size={22} />
-            </div>
-            <h3>Know when to sleep, and when not to</h3>
-            <p>Clear windows in the air and after landing, in both time zones.</p>
-          </div>
-          <div className="benefit">
-            <div className="b-ico">
-              <Icon name="light" size={22} />
-            </div>
-            <h3>Get light at the right time</h3>
-            <p>Seek it in the morning or evening depending on which way you fly.</p>
-          </div>
-          <div className="benefit">
-            <div className="b-ico">
-              <Icon name="spark" size={22} />
-            </div>
-            <h3>Arrive feeling like yourself</h3>
-            <p>A calm, step-by-step plan instead of a sleep-science lecture.</p>
-          </div>
+        <div className="hero-ticket">
+          <FlightTicket
+            trip={upcoming}
+            plan={plan}
+            hour12={prefs.hour12}
+            onOpen={openPlan}
+            onNew={() => navigate('plan')}
+          />
         </div>
       </section>
 
-      <section>
-        <div className="section-head">
-          <h2>How it works</h2>
+      <section className="benefits">
+        <div className="benefit compact">
+          <Icon name="bed" size={20} />
+          <span>Know when to sleep, and when not to</span>
         </div>
-        <div className="how">
-          <div className="how-step">
-            <div className="num mono">01</div>
-            <h4>Add your flight</h4>
-            <p>Where you're going, when you leave and land, and your usual rhythm.</p>
-          </div>
-          <div className="how-step">
-            <div className="num mono">02</div>
-            <h4>Get your timeline</h4>
-            <p>Before, in the air and after landing — each step timed and explained.</p>
-          </div>
-          <div className="how-step">
-            <div className="num mono">03</div>
-            <h4>Follow it, loosely</h4>
-            <p>No need to be perfect. Even half of this plan helps.</p>
-          </div>
+        <div className="benefit compact">
+          <Icon name="light" size={20} />
+          <span>Get light at the right time</span>
+        </div>
+        <div className="benefit compact">
+          <Icon name="spark" size={20} />
+          <span>Arrive feeling like yourself</span>
+        </div>
+      </section>
+
+      <section className="how">
+        <div className="how-step">
+          <span className="num mono">01</span>
+          <span>Add your flight</span>
+        </div>
+        <div className="how-step">
+          <span className="num mono">02</span>
+          <span>Get your timeline</span>
+        </div>
+        <div className="how-step">
+          <span className="num mono">03</span>
+          <span>Follow it, loosely</span>
         </div>
       </section>
 
       <footer className="footer-note">
-        Jetlagged offers general wellness guidance based on how body clocks commonly respond to light, sleep timing
-        and caffeine. It is not a medical device or diagnostic tool.
+        Jetwell offers general wellness guidance and is not a medical device or diagnostic tool.
       </footer>
     </div>
   );

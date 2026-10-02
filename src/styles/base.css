@@ -12,9 +12,10 @@
   --hairline-strong: #d8d1c4;
 
   /* Accents */
-  --accent: #3f6d8e; /* dusk blue */
-  --accent-ink: #2d5772;
-  --accent-wash: #e7eef3;
+  --accent: #0b63f6; /* electric blue */
+  --accent-ink: #0747b8;
+  --accent-wash: #e6efff;
+  --accent-glow: rgba(11, 99, 246, 0.28);
   --sand: #c99a52; /* light moments */
   --sand-ink: #9a7133;
   --sand-wash: #f5ecda;
@@ -26,9 +27,9 @@
   --good: #4f7a5e;
 
   /* Type */
-  --serif: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Space & shape */
   --r-sm: 10px;
@@ -79,8 +80,9 @@ h3,
 h4 {
   font-family: var(--serif);
   font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.1;
+  font-optical-sizing: auto;
+  letter-spacing: -0.005em;
+  line-height: 1.08;
   margin: 0;
   color: var(--ink);
 }
@@ -121,10 +123,10 @@ ul {
 .eyebrow {
   font-family: var(--sans);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--accent);
 }
 .muted {
   color: var(--muted);
@@ -180,12 +182,13 @@ ul {
   transform: translateY(1px) scale(0.99);
 }
 .btn-primary {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 8px 22px -12px var(--accent-glow);
 }
 .btn-primary:hover {
-  background: #000;
-  box-shadow: var(--shadow-1);
+  background: var(--accent-ink);
+  box-shadow: 0 10px 26px -12px var(--accent-glow);
 }
 .btn-accent {
   background: var(--accent);

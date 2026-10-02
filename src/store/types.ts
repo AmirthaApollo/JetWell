@@ -1,8 +1,9 @@
-import type { CaffeineHabit, PrepLevel, StayLength } from '../engine/planEngine';
+import type { CaffeineHabit, PrepLevel, ScheduleItem, StayLength } from '../engine/planEngine';
 
 export interface Layover {
   city: string;
   code: string;
+  country?: string;
   tz: string;
   startISO: string;
   endISO: string;
@@ -14,9 +15,11 @@ export interface Trip {
   destId: string;
   originCity: string;
   originCode: string;
+  originCountry?: string;
   originTz: string;
   destCity: string;
   destCode: string;
+  destCountry?: string;
   destTz: string;
   departureISO: string;
   arrivalISO: string;
@@ -27,6 +30,8 @@ export interface Trip {
   stay: StayLength;
   crewMode?: boolean;
   meetingAtISO?: string | null;
+  layovers?: Layover[];
+  /** @deprecated */
   layover?: Layover | null;
   createdAt: number;
   isDemo?: boolean;
@@ -64,9 +69,12 @@ export interface AppState {
   activeTripId: string | null;
   completed: Record<string, Record<string, boolean>>;
   packing: Record<string, Record<string, boolean>>;
+  schedule: ScheduleItem[];
   prefs: Prefs;
   checkins: CheckIn[];
   recovery: RecoveryScore[];
   dismissedTips: Record<string, boolean>;
   seededAt: number | null;
 }
+
+export type { ScheduleItem };

@@ -4,7 +4,7 @@ import { formatDate, formatDateTime, formatDuration, formatTime } from './time';
 
 export function planToText(plan: Plan, trip: Trip, hour12: boolean): string {
   const lines: string[] = [];
-  lines.push(`JETLAGGED — ${trip.originCity} → ${trip.destCity}`);
+  lines.push(`JETWELL: ${trip.originCity} → ${trip.destCity}`);
   lines.push(`${trip.originCode} → ${trip.destCode}`);
   lines.push(
     `Departs ${formatDateTime(new Date(plan.departure), trip.originTz, hour12)} · Lands ${formatDateTime(
@@ -25,7 +25,7 @@ export function planToText(plan: Plan, trip: Trip, hour12: boolean): string {
     }
   }
   lines.push('');
-  lines.push('Jetlagged offers general wellness guidance and is not a medical device or diagnostic tool.');
+  lines.push('Jetwell offers general wellness guidance and is not a medical device or diagnostic tool.');
   return lines.join('\n');
 }
 
@@ -46,7 +46,7 @@ export function planToIcs(plan: Plan, trip: Trip): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Jetlagged//Recovery plan//EN',
+    'PRODID:-//Jetwell//Recovery plan//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
   ];
@@ -54,11 +54,11 @@ export function planToIcs(plan: Plan, trip: Trip): string {
     const start = item.at;
     const end = item.endAt ?? item.at + (item.durationMin ?? 20) * 60000;
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:${trip.id}-${item.id}@jetlagged`);
+    lines.push(`UID:${trip.id}-${item.id}@jetwell`);
     lines.push(`DTSTAMP:${icsDate(Date.now())}`);
     lines.push(`DTSTART:${icsDate(start)}`);
     lines.push(`DTEND:${icsDate(end)}`);
-    lines.push(`SUMMARY:${escapeIcs('Jetlagged · ' + item.title)}`);
+    lines.push(`SUMMARY:${escapeIcs('Jetwell · ' + item.title)}`);
     lines.push(`DESCRIPTION:${escapeIcs(item.why + ' ' + item.more)}`);
     lines.push(`LOCATION:${escapeIcs(`${trip.destCity} · ${trip.destCode}`)}`);
     lines.push('BEGIN:VALARM');

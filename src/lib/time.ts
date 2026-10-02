@@ -122,6 +122,11 @@ export function formatTime(date: Date, timeZone: string, hour12 = false): string
   return fmt(timeZone, { hour: 'numeric', minute: '2-digit', hour12 }).format(date);
 }
 
+/** e.g. "19:30:05" or "7:30:05 PM" */
+export function formatClock(date: Date, timeZone: string, hour12 = false): string {
+  return fmt(timeZone, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12 }).format(date);
+}
+
 /** e.g. "Tue, 12 Mar" */
 export function formatDate(date: Date, timeZone: string): string {
   return fmt(timeZone, { weekday: 'short', day: 'numeric', month: 'short' }).format(date);

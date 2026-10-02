@@ -83,16 +83,32 @@ describe('app smoke tests', () => {
 
   it('renders the landing page from the wordmark', () => {
     renderApp();
-    fireEvent.click(screen.getAllByRole('button', { name: /Jetlagged home/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /Jetwell home/i })[0]);
     expect(screen.getByRole('heading', { name: 'Land ready.' })).toBeTruthy();
-    expect(screen.getByText(/How it works/i)).toBeTruthy();
+    expect(screen.getByText(/Know when to sleep/i)).toBeTruthy();
   });
 
   it('renders trip mode (Now)', () => {
     renderApp();
     fireEvent.click(screen.getAllByText('Now')[0]);
-    // Either live view, the not-live-yet card, or plan prompt — all valid renders.
+    // Either live view, the not-live-yet card, or plan prompt: all valid renders.
     expect(document.querySelector('.now-view, .screen')).toBeTruthy();
+  });
+
+  it('renders the time zones of my journey', () => {
+    renderApp();
+    fireEvent.click(screen.getAllByText('Time zones')[0]);
+    expect(screen.getByText(/Time zones of my journey/i)).toBeTruthy();
+    expect(screen.getAllByText(/local now/i).length).toBeGreaterThan(0);
+  });
+
+  it('renders the schedule screen and adds an item', () => {
+    renderApp();
+    fireEvent.click(screen.getAllByText('Schedule')[0]);
+    expect(screen.getByText(/Add my schedule/i)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Client call' } });
+    fireEvent.click(screen.getByText(/Add to Day 1/i));
+    expect(screen.getByText('Client call')).toBeTruthy();
   });
 
   it('renders the check-in screen and recovery chart', () => {

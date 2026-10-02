@@ -102,7 +102,7 @@ export function CheckInScreen() {
     if (sleepiness <= 2 && energy >= 4)
       return 'You\u2019re in good shape. Keep light and meals on destination time today and hold your bedtime.';
     if (sleepiness >= 4)
-      return 'Sleepy. If it\u2019s before 3pm, a brief nap is fine — under 30 minutes. Otherwise, light and movement.';
+      return 'Sleepy. If it\u2019s before 3pm, a brief nap is fine, under 30 minutes. Otherwise, light and movement.';
     return 'Steady. Keep the rhythm: light at the right time, meals on local time, and a consistent bedtime.';
   }
 
@@ -142,8 +142,8 @@ export function CheckInScreen() {
           {severe ? (
             <div className="response warn">
               <strong>Thanks for being honest.</strong> If sleep is feeling persistently difficult or you're feeling
-              distressed, it's worth speaking with a doctor or another qualified professional. Jetlagged is general
-              wellness guidance only — it can't assess or treat anything.
+              distressed, it's worth speaking with a doctor or another qualified professional. Jetwell is general
+              wellness guidance only. It can't assess or treat anything.
             </div>
           ) : (
             <div className="response">{responseText()}</div>
@@ -171,7 +171,7 @@ export function CheckInScreen() {
         {landed && (
           <div style={{ marginTop: 18 }}>
             <label style={{ display: 'block', fontWeight: 600, marginBottom: 10 }}>
-              How settled do you feel today? (1–5)
+              How settled do you feel today? (1-5)
             </label>
             <div className="scale">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -190,7 +190,7 @@ export function CheckInScreen() {
               ))}
             </div>
             <p className="tiny muted" style={{ marginTop: 8 }}>
-              A soft guide to your own adjustment — not a medical measurement.
+              A soft guide to your own adjustment, not a medical measurement.
             </p>
           </div>
         )}
@@ -242,7 +242,7 @@ function RecoveryCurve({ points }: { points: { day: number; value: number; at: n
       ))}
       {sorted.length === 0 && (
         <text x={W / 2} y={H / 2} textAnchor="middle" className="rc-label">
-          No recovery scores yet — add one after you land.
+          No recovery scores yet. Add one after you land.
         </text>
       )}
     </svg>

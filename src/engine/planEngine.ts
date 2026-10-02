@@ -4,6 +4,7 @@ import {
   getZonedParts,
   zonedToInstant,
   formatDuration,
+  formatTime,
 } from '../lib/time';
 
 export type Direction = 'eastbound' | 'westbound' | 'none';
@@ -25,6 +26,14 @@ export type ItemKind =
   | 'rest';
 export type StrategyKind = 'shift' | 'partial' | 'stay-home' | 'stay-anchored';
 
+export interface LayoverInput {
+  city: string;
+  code: string;
+  tz: string;
+  start: Date;
+  end: Date;
+}
+
 export interface TripInput {
   originTz: string;
   destTz: string;
@@ -37,13 +46,10 @@ export interface TripInput {
   stay: StayLength;
   crewMode?: boolean;
   meetingAt?: Date | null;
-  layover?: {
-    city: string;
-    code: string;
-    tz: string;
-    start: Date;
-    end: Date;
-  } | null;
+  /** One or more connections. */
+  layovers?: LayoverInput[];
+  /** @deprecated single-connection form, kept for compatibility */
+  layover?: LayoverInput | null;
 }
 
 export interface PlanItem {
@@ -172,7 +178,7 @@ export function buildPlan(input: TripInput): Plan {
       title: 'Stay anchored to one clock',
       why: 'Crossing zones often works best when you keep a single home-time rhythm instead of chasing every shift.',
       more:
-        'Pick the clock you want to live on for this rotation — usually home base — and protect your sleep window as closely as the roster allows. Use light and meals to stay on that clock, not to jump to the new one.',
+        'Pick the clock you want to live on, usually home base, and protect your sleep window around the roster. Use light and meals to stay on that clock.',
       at: atLocal(depParts, -1, 20 * 60, originTz),
       highlight: true,
     });
@@ -204,7 +210,7 @@ export function buildPlan(input: TripInput): Plan {
             ? 'Moving bedtime earlier a little each night makes the early nights after landing far easier.'
             : 'Pushing bedtime later now means your body is already partway to destination time.',
         more:
-          'Keep the shift small — 45 to 60 minutes a night is plenty. The point is a gentle nudge, not a perfect schedule.',
+          'Keep the shift small. 45 to 60 minutes a night is plenty. A gentle nudge, not a perfect schedule.',
         at: atLocal(depParts, dayOffset, targetBed, originTz),
       });
 
@@ -223,7 +229,7 @@ export function buildPlan(input: TripInput): Plan {
             : 'Avoiding bright light early keeps your clock from holding you back from the delay you want.',
         more:
           direction === 'eastbound'
-            ? 'Get outside or sit by a bright window for 20–30 minutes. Skip sunglasses.'
+            ? 'Get outside or sit by a bright window for 20-30 minutes. Skip sunglasses.'
             : 'Keep the room dim, skip the bright window seat, and wear sunglasses outdoors if it is sunny.',
         at: atLocal(depParts, dayOffset, norm(input.wake + 30), originTz),
       });
@@ -234,7 +240,7 @@ export function buildPlan(input: TripInput): Plan {
         id: 'before-preflight',
         phase: 'before',
         kind: 'note',
-        title: 'No prep needed — just travel well',
+        title: 'No prep needed, just travel well',
         why: 'You chose to keep this simple. A few small things on the day still help.',
         more: 'Pack light, eat normally, and avoid caffeine after early afternoon on your travel day.',
         at: atLocal(depParts, -1, 18 * 60, originTz),
@@ -300,7 +306,7 @@ export function buildPlan(input: TripInput): Plan {
       kind: 'meal',
       title: 'Eat the first meal on destination time',
       why: 'Meals are a powerful timing signal. Shifting them early helps your body follow.',
-      more: 'Nothing heroic — just try to eat when destination people are eating, and skip a meal if it lands at a strange hour.',
+      more: 'Nothing heroic. Eat when destination people eat, and skip a meal if it lands at a strange hour.',
       at: departure + 75 * MIN,
     });
 
@@ -370,7 +376,7 @@ export function buildPlan(input: TripInput): Plan {
         id: 'air-rest',
         phase: 'air',
         kind: 'rest',
-        title: 'If tired, rest briefly — no long sleep',
+        title: 'If tired, rest briefly, no long sleep',
         why: 'A short doze takes the edge off without spoiling your landing night.',
         more: 'Keep it under 30 minutes and before the last few hours of the flight.',
         at: arrival - 150 * MIN,
@@ -401,15 +407,17 @@ export function buildPlan(input: TripInput): Plan {
     });
   }
 
-  // ---- LAYOVER ----------------------------------------------------------
-  if (input.layover) {
-    const lo = input.layover;
+  // ---- LAYOVER(S) -------------------------------------------------------
+  // Each connection gets its own light, movement and optional rest guidance.
+  const layovers = input.layovers ?? (input.layover ? [input.layover] : []);
+  layovers.forEach((lo, idx) => {
     const loStart = lo.start.getTime();
     const loEnd = lo.end.getTime();
     const loMinutes = Math.round((loEnd - loStart) / MIN);
+    const tag = `lo${idx}`;
     if (loMinutes >= 240) {
       air.push({
-        id: 'layover-light',
+        id: `layover-light-${tag}`,
         phase: 'air',
         kind: 'light',
         title: `Get light and move in ${lo.city}`,
@@ -419,17 +427,17 @@ export function buildPlan(input: TripInput): Plan {
         highlight: true,
       });
       air.push({
-        id: 'layover-move',
+        id: `layover-move-${tag}`,
         phase: 'air',
         kind: 'move',
-        title: 'Walk the terminal',
+        title: `Walk the terminal in ${lo.city}`,
         why: 'Movement keeps energy up and stiffness down on a long journey.',
         more: 'A slow 10-minute lap, water on the way.',
         at: loStart + Math.round(loMinutes * 0.45) * MIN,
       });
       if (loMinutes >= 300) {
         air.push({
-          id: 'layover-rest',
+          id: `layover-rest-${tag}`,
           phase: 'air',
           kind: 'nap',
           title: `A short rest in ${lo.city}`,
@@ -441,21 +449,21 @@ export function buildPlan(input: TripInput): Plan {
       }
     } else if (loMinutes > 0) {
       air.push({
-        id: 'layover-quick',
+        id: `layover-quick-${tag}`,
         phase: 'air',
         kind: 'note',
         title: `Quick connection in ${lo.city}`,
-        why: 'Too short to plan around — just stay hydrated and keep moving.',
+        why: 'Too short to plan around. Stay hydrated and keep moving.',
         more: 'Grab water on the way to the next gate.',
         at: loStart,
       });
     }
-  }
+  });
 
   // ---- AFTER LANDING ----------------------------------------------------
   const dayOfArrival = 0;
 
-  // Daylight — the most important item.
+  // Daylight, the most important item.
   const lightWindow = direction === 'eastbound' ? [6 * 60 + 30, 10 * 60 + 30] : [16 * 60, 20 * 60];
   const dayStart = atLocal(arrParts, 0, 0, destTz);
   const arrivalMin = Math.round((arrival - dayStart) / MIN);
@@ -475,7 +483,7 @@ export function buildPlan(input: TripInput): Plan {
       direction === 'eastbound'
         ? 'Morning light at your destination is the single most useful thing for shifting earlier.'
         : 'Evening light helps push your clock later, which is the direction you need.',
-    more: 'Step outside for 15–30 minutes without sunglasses. This is the most important item for the next few days.',
+    more: 'Step outside for 15-30 minutes without sunglasses. The most important thing you can do today.',
     at: lightInstant,
     highlight: true,
   });
@@ -489,7 +497,7 @@ export function buildPlan(input: TripInput): Plan {
     why:
       direction === 'eastbound'
         ? 'Evening light pulls your clock the wrong way when you are trying to move earlier.'
-        : 'Morning light will anchor you to the old clock — dim it down.',
+        : 'Morning light will anchor you to the old clock. Keep it dim.',
     more: 'Dim lamps, lower screens, and wear sunglasses outdoors at the wrong time of day.',
     at:
       direction === 'eastbound'
@@ -515,7 +523,7 @@ export function buildPlan(input: TripInput): Plan {
     kind: 'move',
     title: 'Take a short walk',
     why: 'Gentle movement lifts energy and pairs well with daylight.',
-    more: 'A 10–20 minute stroll, ideally outside.',
+    more: 'A 10-20 minute stroll outside.',
     at: lightInstant + 45 * MIN,
   });
 
@@ -570,7 +578,7 @@ export function buildPlan(input: TripInput): Plan {
         ? 'That slot often falls in the groggiest part of the adjustment.'
         : 'That slot tends to sit outside the usual dip.',
       more: inLow
-        ? 'A short walk in daylight beforehand, water, and a small planned coffee earlier — not right before.'
+        ? 'A short walk in daylight beforehand, water, and a small planned coffee earlier, not right before.'
         : 'Keep your normal rhythm that day and get light as planned.',
       at: input.meetingAt.getTime() - 60 * MIN,
       highlight: inLow,
@@ -617,7 +625,7 @@ function buildStrategyLine(
     return `Stay anchored to home time. You cross zones constantly, so the goal is a steady rhythm, not a full shift.`;
   }
   if (strategy === 'stay-home') {
-    return `Stay on home time. Your trip is short, so it is not worth shifting — get through it and recover when you get back.`;
+    return `Stay on home time. Your trip is short, so it is not worth shifting. Get through it and recover when you get back.`;
   }
   if (direction === 'none') {
     return `No time zone change. Hold your normal routine and arrive fresh.`;
@@ -633,15 +641,15 @@ function buildStrategyLine(
 }
 
 function buildPrepLine(prep: PrepLevel, prepDays: number, strategy: StrategyKind): string {
-  if (strategy === 'stay-home') return 'No pre-flight shifting — keep your normal rhythm.';
-  if (strategy === 'stay-anchored') return 'No shifting — protect one clock.';
+  if (strategy === 'stay-home') return 'No pre-flight shifting. Keep your normal rhythm.';
+  if (strategy === 'stay-anchored') return 'No shifting. Protect one clock.';
   if (prepDays === 0) return 'Starting on your travel day. No earlier prep needed.';
   const labels: Record<PrepLevel, string> = {
     minimal: 'a light start',
     balanced: 'a balanced start',
     full: 'a full start',
   };
-  return `${prepDays} day${prepDays > 1 ? 's' : ''} out — ${labels[prep]}.`;
+  return `${prepDays} day${prepDays > 1 ? 's' : ''} out, ${labels[prep]}.`;
 }
 
 function buildArcSegments(input: TripInput, direction: Direction): ArcSegment[] {
@@ -681,3 +689,121 @@ export function currentItem(items: PlanItem[], now: number): { current: PlanItem
 export function nextItem(items: PlanItem[], now: number): PlanItem | null {
   return items.find((i) => i.at > now) ?? null;
 }
+
+/* ==========================================================================
+ * SCHEDULE
+ * The traveller can add fixed commitments (meetings, classes, events) for the
+ * days after landing. These are stored in destination local time and the
+ * engine flags any that land in the body's biological night.
+ * ========================================================================== */
+
+export type ScheduleType = 'meeting' | 'class' | 'event' | 'free';
+
+export interface ScheduleItem {
+  id: string;
+  tripId: string;
+  day: number; // 1-based day after landing
+  title: string;
+  startMin: number; // minutes from destination local midnight
+  endMin: number;
+  type: ScheduleType;
+}
+
+export interface ScheduleConflict {
+  itemId: string;
+  severity: 'warn' | 'info';
+  message: string;
+}
+
+/**
+ * Compute the absolute instant of a schedule item, anchored to destination
+ * local midnight on the day of arrival. Pure and DST-aware.
+ */
+export function scheduleItemInstant(item: ScheduleItem, arrival: number, destTz: string): number {
+  const arrParts = getZonedParts(new Date(arrival), destTz);
+  const day = addDaysToParts(arrParts.year, arrParts.month, arrParts.day, item.day - 1);
+  const minute = item.startMin;
+  return zonedToInstant(day.year, day.month, day.day, Math.floor(minute / 60), minute % 60, destTz).getTime();
+}
+
+/**
+ * Flag commitments that fall during the body clock's night at home, or very
+ * early destination mornings, with a gentle suggestion.
+ */
+export function evaluateSchedule(
+  items: ScheduleItem[],
+  opts: { arrival: number; destTz: string; originTz: string },
+): ScheduleConflict[] {
+  const out: ScheduleConflict[] = [];
+  for (const it of items) {
+    const at = scheduleItemInstant(it, opts.arrival, opts.destTz);
+    const home = getZonedParts(new Date(at), opts.originTz);
+    const homeMin = home.hour * 60 + home.minute;
+    const bioNight = homeMin >= 23 * 60 || homeMin < 6 * 60;
+    const localHour = Math.floor(it.startMin / 60);
+    if (bioNight) {
+      out.push({
+        itemId: it.id,
+        severity: 'warn',
+        message: `${it.title} at ${padTime(it.startMin)} falls during your biological night (about ${formatTime(
+          new Date(at),
+          opts.originTz,
+        )} at home). Consider a short nap before it.`,
+      });
+    } else if (localHour < 7) {
+      out.push({
+        itemId: it.id,
+        severity: 'info',
+        message: `${it.title} is an early start. Get daylight first and keep the morning simple.`,
+      });
+    }
+  }
+  return out;
+}
+
+function padTime(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/* ==========================================================================
+ * EATING
+ * Meal timing nudged toward destination local time, attached per day.
+ * ========================================================================== */
+
+export interface MealTip {
+  day: number;
+  at: number; // instant of the first meal suggestion
+  title: string;
+  text: string;
+}
+
+export const EATING_TIPS: string[] = [
+  'Lighter meals on arrival night. Big dinners sit badly on a confused body clock.',
+  'Hydrate steadily through the day. Water, not just coffee.',
+  'Limit alcohol and heavy meals close to bedtime.',
+  'Get protein early in the local day to steady your energy.',
+  'Caffeine cut-off: about 8 hours before your target bedtime.',
+];
+
+/** Build one meal-timing card for each day after landing. */
+export function mealTips(opts: { arrival: number; destTz: string; dayCount: number }): MealTip[] {
+  const arrParts = getZonedParts(new Date(opts.arrival), opts.destTz);
+  const tips: MealTip[] = [];
+  for (let d = 1; d <= opts.dayCount; d++) {
+    const day = addDaysToParts(arrParts.year, arrParts.month, arrParts.day, d - 1);
+    const at = zonedToInstant(day.year, day.month, day.day, 8, 0, opts.destTz).getTime();
+    tips.push({
+      day: d,
+      at,
+      title: d === 1 ? 'Day 1: eat lightly' : `Day ${d}: eat on local time`,
+      text:
+        d === 1
+          ? 'Breakfast 8am, lunch 1pm, dinner 7pm local. Keep it light tonight even if you are not hungry.'
+          : 'Breakfast 8am, lunch 1pm, dinner 7pm local. Protein early, lighter dinner.',
+    });
+  }
+  return tips;
+}
+

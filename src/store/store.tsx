@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AppState, CheckIn, Prefs, RecoveryScore, Trip } from './types';
+import type { AppState, CheckIn, Prefs, RecoveryScore, ScheduleItem, Trip } from './types';
 import { seedTrips, uid } from './seed';
 
-const KEY = 'jetlagged:v1';
+const KEY = 'jetwell:v1';
 
 const defaultPrefs: Prefs = {
   homeCityId: 'del',
@@ -34,6 +34,7 @@ function freshState(): AppState {
     activeTripId: 'demo-del-lhr',
     completed: {},
     packing: {},
+    schedule: [],
     prefs: defaultPrefs,
     checkins: [],
     recovery: defaultRecovery(trips),
@@ -68,9 +69,13 @@ interface StoreValue extends AppState {
   togglePacking: (tripId: string, itemId: string) => void;
   isPacked: (tripId: string, itemId: string) => boolean;
   updatePrefs: (patch: Partial<Prefs>) => void;
+  addScheduleItem: (item: ScheduleItem) => void;
+  updateScheduleItem: (item: ScheduleItem) => void;
+  deleteScheduleItem: (id: string) => void;
   addCheckIn: (c: Omit<CheckIn, 'id'>) => void;
   addRecovery: (r: Omit<RecoveryScore, 'id'>) => void;
   dismissTip: (id: string) => void;
+  clearTrip: (id: string) => void;
   resetDemo: () => void;
   clearAll: () => void;
 }
@@ -88,7 +93,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch {
-      /* storage full or unavailable — ignore */
+      /* storage unavailable or full, ignore */
     }
   }, [state]);
 
@@ -110,6 +115,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         trips,
+        schedule: s.schedule.filter((x) => x.tripId !== id),
+        activeTripId: s.activeTripId === id ? trips[0]?.id ?? null : s.activeTripId,
+      };
+    });
+  }, []);
+
+  /** Clear the active/selected trip entirely, including its schedule. */
+  const clearTrip = useCallback((id: string) => {
+    setState((s) => {
+      const trips = s.trips.filter((t) => t.id !== id);
+      const completed = { ...s.completed };
+      const packing = { ...s.packing };
+      delete completed[id];
+      delete packing[id];
+      return {
+        ...s,
+        trips,
+        completed,
+        packing,
+        schedule: s.schedule.filter((x) => x.tripId !== id),
         activeTripId: s.activeTripId === id ? trips[0]?.id ?? null : s.activeTripId,
       };
     });
@@ -206,6 +231,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, prefs: { ...s.prefs, ...patch } }));
   }, []);
 
+  const addScheduleItem = useCallback((item: ScheduleItem) => {
+    setState((s) => ({ ...s, schedule: [...s.schedule, item] }));
+  }, []);
+
+  const updateScheduleItem = useCallback((item: ScheduleItem) => {
+    setState((s) => ({ ...s, schedule: s.schedule.map((x) => (x.id === item.id ? item : x)) }));
+  }, []);
+
+  const deleteScheduleItem = useCallback((id: string) => {
+    setState((s) => ({ ...s, schedule: s.schedule.filter((x) => x.id !== id) }));
+  }, []);
+
   const addCheckIn = useCallback((c: Omit<CheckIn, 'id'>) => {
     setState((s) => ({ ...s, checkins: [{ ...c, id: uid() }, ...s.checkins] }));
   }, []);
@@ -233,6 +270,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       activeTripId: null,
       completed: {},
       packing: {},
+      schedule: [],
       checkins: [],
       recovery: [],
     };
@@ -259,9 +297,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     togglePacking,
     isPacked,
     updatePrefs,
+    addScheduleItem,
+    updateScheduleItem,
+    deleteScheduleItem,
     addCheckIn,
     addRecovery,
     dismissTip,
+    clearTrip,
     resetDemo,
     clearAll,
   };

@@ -4,11 +4,12 @@ import { useStore } from '../store/store';
 import { useNow, useReducedMotion } from '../components/hooks';
 import { useToast } from '../components/Toast';
 import { BoardingPass } from '../components/BoardingPass';
+import { WorldClocks, type ClockZone } from '../components/WorldClocks';
 import { DayArc } from '../components/DayArc';
 import { ItemCard } from '../components/ItemCard';
 import { Icon } from '../components/Icon';
 import { Modal } from '../components/Modal';
-import { buildPlan, currentItem, nextItem, type Phase } from '../engine/planEngine';
+import { buildPlan, EATING_TIPS, mealTips, currentItem, nextItem, type Phase } from '../engine/planEngine';
 import { tripToInput } from '../store/seed';
 import { formatDuration } from '../lib/time';
 import { planToText, planToIcs, downloadFile, tripTitle } from '../lib/export';
@@ -80,11 +81,21 @@ export function Itinerary() {
     (t) => t.originId === activeTrip.destId && t.destId === activeTrip.originId && t.id !== activeTrip.id,
   );
 
+  const clocks: ClockZone[] = [
+    { code: activeTrip.originCode, city: activeTrip.originCity, tz: activeTrip.originTz },
+    ...(activeTrip.layovers ?? (activeTrip.layover ? [activeTrip.layover] : [])).map((l) => ({
+      code: l.code,
+      city: l.city,
+      tz: l.tz,
+    })),
+    { code: activeTrip.destCode, city: activeTrip.destCity, tz: activeTrip.destTz, highlight: true },
+  ];
+
   function share() {
     const text = planToText(plan!, activeTrip!, prefs.hour12);
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(
-        () => push({ title: 'Plan copied', body: 'Paste it anywhere — notes, chat, email.', icon: 'copy' }),
+        () => push({ title: 'Plan copied', body: 'Paste it anywhere: notes, chat, email.', icon: 'copy' }),
         () => push({ title: 'Could not copy', body: 'Try the print view instead.', icon: 'info' }),
       );
     } else {
@@ -128,6 +139,8 @@ export function Itinerary() {
       )}
 
       <BoardingPass trip={activeTrip} plan={plan} hour12={prefs.hour12} />
+
+      <WorldClocks clocks={clocks} hour12={prefs.hour12} />
 
       <div className="between row" style={{ margin: '20px 0 0', flexWrap: 'wrap', gap: 12 }}>
         <span className="eyebrow">Times shown in</span>
@@ -222,8 +235,33 @@ export function Itinerary() {
         })}
       </div>
 
+      <section className="phase" aria-label="Eating on local time">
+        <div className="phase-head">
+          <span className="ph-dot" />
+          <h3>Eating on local time</h3>
+          <div className="phase-rule" />
+          <span className="ph-sub">Days 1 to 5</span>
+        </div>
+        <div className="eating-grid">
+          {mealTips({ arrival: plan.arrival, destTz: activeTrip.destTz, dayCount: 5 }).map((tip) => (
+            <div className="eat-card" key={tip.day}>
+              <span className="eat-day">Day {tip.day}</span>
+              <h4>{tip.title}</h4>
+              <p>{tip.text}</p>
+            </div>
+          ))}
+        </div>
+        <div className="tip-list">
+          {EATING_TIPS.map((t) => (
+            <span className="tip-pill" key={t}>
+              {t}
+            </span>
+          ))}
+        </div>
+      </section>
+
       <p className="footer-note" style={{ marginTop: 40 }}>
-        Jetlagged offers general wellness guidance and is not a medical device or diagnostic tool. For sleep aids or
+        Jetwell offers general wellness guidance and is not a medical device or diagnostic tool. For sleep aids or
         medication, check with a pharmacist or doctor.
       </p>
 

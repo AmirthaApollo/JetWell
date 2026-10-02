@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 export type Route =
   | 'landing'
   | 'plan'
+  | 'journey'
+  | 'schedule'
   | 'itinerary'
   | 'now'
   | 'reset'
@@ -11,7 +13,18 @@ export type Route =
   | 'trips'
   | 'profile';
 
-const VALID: Route[] = ['landing', 'plan', 'itinerary', 'now', 'reset', 'checkin', 'trips', 'profile'];
+const VALID: Route[] = [
+  'landing',
+  'plan',
+  'journey',
+  'schedule',
+  'itinerary',
+  'now',
+  'reset',
+  'checkin',
+  'trips',
+  'profile',
+];
 
 interface RouterValue {
   route: Route;

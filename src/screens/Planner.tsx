@@ -50,8 +50,9 @@ export function Planner() {
   const [showOptional, setShowOptional] = useState(false);
   const [crewMode, setCrewMode] = useState(false);
   const [meetingStr, setMeetingStr] = useState('');
-  const [via, setVia] = useState<City | null>(null);
-  const [layoverHours, setLayoverHours] = useState(5);
+  const [connections, setConnections] = useState<{ city: City | null; hours: number }[]>([
+    { city: null, hours: 5 },
+  ]);
   const [building, setBuilding] = useState(false);
 
   function pickOrigin(c: City) {
@@ -90,9 +91,16 @@ export function Planner() {
     return { raw, label: `${formatDuration(abs)} ${dir} your home time`, note };
   }, [origin, dest, depStr]);
 
+  const parsed = useMemo(() => {
+    const departure = origin && depStr ? parseLocalInput(depStr, origin.tz) : null;
+    const arrival = dest && arrStr ? parseLocalInput(arrStr, dest.tz) : null;
+    const orderOk = Boolean(departure && arrival && arrival.getTime() > departure.getTime());
+    return { departure, arrival, orderOk };
+  }, [origin, dest, depStr, arrStr]);
+
   const canNext =
     (step === 1 && origin && dest && origin.id !== dest.id) ||
-    (step === 2 && depStr && arrStr && tzInfo) ||
+    (step === 2 && depStr && arrStr && tzInfo && parsed.orderOk) ||
     step === 3 ||
     step === 4 ||
     step === 5;
@@ -110,18 +118,28 @@ export function Planner() {
     if (!origin || !dest) return;
     const departure = parseLocalInput(depStr, origin.tz);
     const arrival = parseLocalInput(arrStr, dest.tz);
-    if (!departure || !arrival) return;
+    if (!departure || !arrival || arrival.getTime() <= departure.getTime()) return;
     setBuilding(true);
     const [bh, bm] = bedtime.split(':').map(Number);
     const [wh, wm] = wake.split(':').map(Number);
 
-    let layover: Trip['layover'] = null;
-    if (via && via.id) {
-      const total = arrival.getTime() - departure.getTime();
-      const start = new Date(departure.getTime() + total * 0.5);
-      const end = new Date(Math.min(start.getTime() + layoverHours * 3600000, arrival.getTime() - 45 * 60000));
-      layover = { city: via.city, code: via.code, tz: via.tz, startISO: start.toISOString(), endISO: end.toISOString() };
-    }
+    const total = arrival.getTime() - departure.getTime();
+    const active = connections.filter((c) => c.city && c.city.id);
+    const layovers: Trip['layovers'] = active.map((c, i) => {
+      const cCity = c.city as City;
+      const frac = (i + 1) / (active.length + 1);
+      const start = new Date(departure.getTime() + total * frac);
+      const end = new Date(Math.min(start.getTime() + c.hours * 3600000, arrival.getTime() - 45 * 60000));
+      return {
+        city: cCity.city,
+        code: cCity.code,
+        country: cCity.country,
+        tz: cCity.tz,
+        startISO: start.toISOString(),
+        endISO: end.toISOString(),
+      };
+    });
+    const label = [origin.city, ...active.map((c) => (c.city as City).city), dest.city].join(' → ');
 
     const trip: Trip = {
       id: uid(),
@@ -129,9 +147,11 @@ export function Planner() {
       destId: dest.id,
       originCity: origin.city,
       originCode: origin.code,
+      originCountry: origin.country,
       originTz: origin.tz,
       destCity: dest.city,
       destCode: dest.code,
+      destCountry: dest.country,
       destTz: dest.tz,
       departureISO: departure.toISOString(),
       arrivalISO: arrival.toISOString(),
@@ -142,15 +162,15 @@ export function Planner() {
       stay,
       crewMode,
       meetingAtISO: meetingStr ? parseLocalInput(meetingStr, dest.tz)?.toISOString() ?? null : null,
-      layover,
+      layovers,
       createdAt: Date.now(),
-      label: via && via.id ? `${origin.city} → ${via.city} → ${dest.city}` : `${origin.city} → ${dest.city}`,
+      label,
     };
 
     window.setTimeout(() => {
       addTrip(trip);
-      push({ title: 'Itinerary ready', body: 'Land ready. Follow it loosely.', icon: 'check' });
-      navigate('itinerary');
+      push({ title: 'Trip saved', body: 'Here are the time zones of your journey.', icon: 'globe' });
+      navigate('journey');
     }, 1250);
   }
 
@@ -204,7 +224,7 @@ export function Planner() {
         <div className="step" key="s2">
           <h2>When does your flight leave and land?</h2>
           <p className="hint">
-            Enter times in each city's own local time — we do the conversion.
+            Enter times in each city's own local time. We handle the conversion.
           </p>
           <div className="field-grid">
             <div className="field">
@@ -231,7 +251,7 @@ export function Planner() {
               />
             </div>
           </div>
-          {tzInfo && (
+          {tzInfo && parsed.orderOk && (
             <div className="tz-callout">
               <Icon name="globe" size={20} />
               <div>
@@ -239,6 +259,61 @@ export function Planner() {
               </div>
             </div>
           )}
+          {parsed.departure && parsed.arrival && !parsed.orderOk && (
+            <div className="tz-callout error" role="alert">
+              <Icon name="info" size={20} />
+              <div>Arrival must be after departure. Please check your dates and times.</div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 22 }}>
+            <div className="between row" style={{ marginBottom: 10 }}>
+              <span className="eyebrow">Connections (optional)</span>
+              <button
+                className="btn-quiet"
+                onClick={() => setConnections((c) => [...c, { city: null, hours: 5 }])}
+                type="button"
+              >
+                <Icon name="plus" size={15} /> Add layover
+              </button>
+            </div>
+            {connections.map((conn, i) => (
+              <div className="connection-row" key={i}>
+                <CitySearch
+                  label={`Connection ${i + 1}`}
+                  value={conn.city?.id ?? null}
+                  onPick={(c) => setConnections((list) => list.map((x, j) => (j === i ? { ...x, city: c.id ? c : null } : x)))}
+                  placeholder="e.g. Dubai"
+                />
+                <div className="field conn-hours">
+                  <label htmlFor={`lay-${i}`}>Hours</label>
+                  <input
+                    id={`lay-${i}`}
+                    type="number"
+                    min={1}
+                    max={24}
+                    className="input mono"
+                    value={conn.hours}
+                    onChange={(e) =>
+                      setConnections((list) =>
+                        list.map((x, j) => (j === i ? { ...x, hours: Math.max(1, Math.min(24, Number(e.target.value) || 1)) } : x)),
+                      )
+                    }
+                  />
+                </div>
+                {connections.length > 1 && (
+                  <button
+                    className="btn-quiet conn-remove"
+                    onClick={() => setConnections((list) => list.filter((_, j) => j !== i))}
+                    aria-label={`Remove connection ${i + 1}`}
+                    type="button"
+                  >
+                    <Icon name="trash" size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -265,7 +340,7 @@ export function Planner() {
                 [
                   ['none', 'None', 'No caffeine, or rarely.'],
                   ['one', '1 cup', 'One a day, usually morning.'],
-                  ['two_three', '2–3 cups', 'A steady everyday habit.'],
+                  ['two_three', '2-3 cups', 'A steady everyday habit.'],
                   ['lots', 'Lots', 'Caffeine is how you function.'],
                 ] as [CaffeineHabit, string, string][]
               ).map(([v, t, s]) => (
@@ -309,12 +384,12 @@ export function Planner() {
       {step === 5 && (
         <div className="step" key="s5">
           <h2>How long are you staying?</h2>
-          <p className="hint">Short trips get a "stay on home time" plan — recovering back home is easier than shifting twice.</p>
+          <p className="hint">Short trips stay on home time. Easier than shifting twice.</p>
           <div className="option-list">
             {(
               [
                 ['short', 'Under 3 days', 'Stay on home time, partial shift.'],
-                ['medium', '3–7 days', 'Partially shift toward destination time.'],
+                ['medium', '3-7 days', 'Partially shift toward destination time.'],
                 ['long', '1 week +', 'Shift fully to destination time.'],
               ] as [StayLength, string, string][]
             ).map(([v, t, s]) => (
@@ -365,30 +440,6 @@ export function Planner() {
                   <div className="tiny muted" style={{ marginTop: 6 }}>
                     Entered in {dest.city} local time.
                   </div>
-                </div>
-              )}
-              {dest && (
-                <div className="field-grid">
-                  <CitySearch
-                    label="Connection through (optional)"
-                    value={via?.id ?? null}
-                    onPick={(c) => setVia(c.id ? c : null)}
-                    placeholder="e.g. Dubai"
-                  />
-                  {via && via.id && (
-                    <div className="field">
-                      <label htmlFor="lay">Layover length (hours)</label>
-                      <input
-                        id="lay"
-                        type="number"
-                        min={1}
-                        max={24}
-                        className="input mono"
-                        value={layoverHours}
-                        onChange={(e) => setLayoverHours(Math.max(1, Math.min(24, Number(e.target.value) || 1)))}
-                      />
-                    </div>
-                  )}
                 </div>
               )}
             </div>

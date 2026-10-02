@@ -9,6 +9,8 @@ import { buildPlan } from './engine/planEngine';
 import { tripToInput } from './store/seed';
 import { Landing } from './screens/Landing';
 import { Planner } from './screens/Planner';
+import { Journey } from './screens/Journey';
+import { Schedule } from './screens/Schedule';
 import { Itinerary } from './screens/Itinerary';
 import { TripMode } from './screens/TripMode';
 import { Reset } from './screens/Reset';
@@ -18,12 +20,16 @@ import { Profile } from './screens/Profile';
 
 const NAV: { route: Route; label: string; icon: IconName }[] = [
   { route: 'itinerary', label: 'Itinerary', icon: 'calendar' },
-  { route: 'now', label: 'Now', icon: 'clock' },
-  { route: 'reset', label: 'Reset', icon: 'spark' },
-  { route: 'checkin', label: 'Check-in', icon: 'globe' },
+  { route: 'journey', label: 'Time zones', icon: 'globe' },
+  { route: 'schedule', label: 'Schedule', icon: 'clock' },
+  { route: 'now', label: 'Now', icon: 'spark' },
+  { route: 'reset', label: 'Reset', icon: 'light' },
+  { route: 'checkin', label: 'Check-in', icon: 'info' },
   { route: 'trips', label: 'Trips', icon: 'plane' },
-  { route: 'profile', label: 'Profile', icon: 'info' },
+  { route: 'profile', label: 'Profile', icon: 'note' },
 ];
+
+const MOBILE_TABS: Route[] = ['itinerary', 'journey', 'schedule', 'trips', 'profile'];
 
 export function App() {
   const { activeTrip } = useStore();
@@ -53,7 +59,7 @@ function Shell() {
       </a>
       <div className="app">
         <aside className="sidebar" aria-label="Primary">
-          <button onClick={() => navigate('landing')} aria-label="Jetlagged home" style={{ alignSelf: 'flex-start' }}>
+          <button onClick={() => navigate('landing')} aria-label="Jetwell home" style={{ alignSelf: 'flex-start' }}>
             <Wordmark />
           </button>
           <nav className="nav">
@@ -74,7 +80,7 @@ function Shell() {
 
         <div className="main">
           <header className="mobile-top">
-            <button onClick={() => navigate('landing')} aria-label="Jetlagged home">
+            <button onClick={() => navigate('landing')} aria-label="Jetwell home">
               <Wordmark />
             </button>
             <button
@@ -92,17 +98,20 @@ function Shell() {
         </div>
 
         <nav className="tabbar" aria-label="Primary">
-          {NAV.filter((n) => n.route !== 'checkin').map((n) => (
-            <button
-              key={n.route}
-              className={`tab ${route === n.route ? 'active' : ''}`}
-              onClick={() => navigate(n.route)}
-              aria-current={route === n.route ? 'page' : undefined}
-            >
-              <Icon name={n.icon} />
-              {n.label}
-            </button>
-          ))}
+          {MOBILE_TABS.map((r) => {
+            const n = NAV.find((x) => x.route === r)!;
+            return (
+              <button
+                key={n.route}
+                className={`tab ${route === n.route ? 'active' : ''}`}
+                onClick={() => navigate(n.route)}
+                aria-current={route === n.route ? 'page' : undefined}
+              >
+                <Icon name={n.icon} />
+                {n.label}
+              </button>
+            );
+          })}
         </nav>
         <button className="fab" onClick={() => navigate('checkin')} aria-label="How I'm feeling">
           <Icon name="globe" size={22} />
@@ -119,6 +128,10 @@ function Screen({ route }: { route: Route }) {
       return <Landing />;
     case 'plan':
       return <Planner />;
+    case 'journey':
+      return <Journey />;
+    case 'schedule':
+      return <Schedule />;
     case 'itinerary':
       return <Itinerary />;
     case 'now':

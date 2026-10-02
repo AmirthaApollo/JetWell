@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Plan } from '../engine/planEngine';
 import type { Trip as TripModel } from '../store/types';
 import { Icon } from './Icon';
+import { Barcode } from './Barcode';
 import { formatDate, formatTime, formatDuration } from '../lib/time';
 
 export function BoardingPass({
@@ -70,10 +71,13 @@ export function BoardingPass({
           </span>
           {plan.isNearTwelveHours && (
             <span className="chip">
-              <span className="dot" /> Near 12h — shortest direction used
+              <span className="dot" /> Near 12h, shortest direction used
             </span>
           )}
         </div>
+      </div>
+      <div className="bpass-code">
+        <Barcode seed={trip.id + trip.originCode + trip.destCode} height={34} />
       </div>
       <div className="bpass-strategy">
         <span className="s-label">Strategy</span>

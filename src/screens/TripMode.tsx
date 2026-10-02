@@ -60,7 +60,7 @@ export function TripMode() {
           <p className="muted" style={{ maxWidth: 40 + 'ch', marginBottom: 20 }}>
             {until > 0
               ? `Trip mode opens 48 hours before departure. That's in ${formatDuration(until / 60000)}.`
-              : 'Here is the plan for reference — you can still check items off.'}
+              : 'Here is the plan for reference. You can still check items off.'}
           </p>
           <button className="btn btn-ghost" onClick={() => navigate('itinerary')}>
             View itinerary
@@ -81,7 +81,7 @@ export function TripMode() {
   function handleDone(label: 'Done' | 'Skip') {
     toggleItem(activeTrip!.id, current.id);
     push({
-      title: label === 'Done' ? 'Nice work.' : 'Skipped — no problem.',
+      title: label === 'Done' ? 'Nice work.' : 'Skipped. No problem.',
       body: label === 'Done' ? 'On to the next one.' : 'Even half of this plan helps.',
       icon: label === 'Done' ? 'check' : 'arrow',
     });

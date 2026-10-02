@@ -8,12 +8,12 @@ import type { CaffeineHabit } from '../engine/planEngine';
 const CAFFEINE_OPTIONS: [CaffeineHabit, string][] = [
   ['none', 'None'],
   ['one', '1 cup'],
-  ['two_three', '2–3 cups'],
+  ['two_three', '2-3 cups'],
   ['lots', 'Lots'],
 ];
 
 export function Profile() {
-  const { prefs, updatePrefs, resetDemo, clearAll, trips, checkins, recovery } = useStore();
+  const { prefs, updatePrefs, resetDemo, clearAll, clearTrip, activeTrip, trips, checkins, recovery } = useStore();
   const { push } = useToast();
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -114,22 +114,11 @@ export function Profile() {
       </div>
 
       <div className="card pad" style={{ marginBottom: 24 }}>
-        <div className="eyebrow" style={{ marginBottom: 12 }}>How Jetlagged works</div>
+        <div className="eyebrow" style={{ marginBottom: 12 }}>How Jetwell works</div>
         <div className="explainer">
-          <p>
-            Jet lag is a timing problem. Your body clock runs on the light, meals and sleep it's used to. Cross a few
-            time zones and it's suddenly out of step with the world around you.
-          </p>
-          <p>
-            We take your flight and generate a plan in three phases — before you fly, in the air, and after landing.
-            Each step tells you what to do, when (in both time zones), and why. The logic follows how body clocks
-            commonly respond to light, sleep timing and caffeine: shift a little each day, get light at the right time,
-            keep naps short, and eat on local time.
-          </p>
-          <p>
-            Every recommendation is general guidance, not a medical claim. We never diagnose and never suggest
-            medication or supplement doses. For sleep aids or medication, check with a pharmacist or doctor.
-          </p>
+          <p>Jet lag is a timing problem. Your body clock runs on light, meals and sleep. Cross a few zones and it is out of step.</p>
+          <p>We plan three phases around your flight: before, in the air, after. Each step says what to do, when, and why, based on light, sleep timing and caffeine.</p>
+          <p>General guidance only. We never diagnose or suggest medication. For sleep aids, check with a pharmacist or doctor.</p>
         </div>
       </div>
 
@@ -141,6 +130,18 @@ export function Profile() {
           stored only in this browser.
         </p>
         <div className="row gap-12" style={{ flexWrap: 'wrap' }}>
+          {activeTrip && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                const name = activeTrip.label ?? `${activeTrip.originCity} to ${activeTrip.destCity}`;
+                clearTrip(activeTrip.id);
+                push({ title: 'Trip cleared', body: `${name} and its schedule were removed.`, icon: 'trash' });
+              }}
+            >
+              <Icon name="close" size={15} /> Clear my trip
+            </button>
+          )}
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => {
@@ -175,7 +176,7 @@ export function Profile() {
       </div>
 
       <p className="footer-note">
-        Jetlagged offers general wellness guidance and is not a medical device or diagnostic tool. People with sleep
+        Jetwell offers general wellness guidance and is not a medical device or diagnostic tool. People with sleep
         disorders, who are pregnant, or with health conditions that affect sleep should check with a professional
         before changing routines.
       </p>

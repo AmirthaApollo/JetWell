@@ -1,6 +1,6 @@
 export function Wordmark({ size = 20 }: { size?: number }) {
   return (
-    <span className="wordmark" aria-label="Jetlagged">
+    <span className="wordmark" aria-label="Jetwell">
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className="wm-mark">
         <path
           d="M3 17c6-1 13-6 18-13"
@@ -11,7 +11,7 @@ export function Wordmark({ size = 20 }: { size?: number }) {
         <circle cx="3.5" cy="17" r="2" fill="var(--sand)" />
         <circle cx="20.5" cy="4.5" r="2" fill="var(--indigo)" />
       </svg>
-      <span className="wm-text">Jetlagged</span>
+      <span className="wm-text">Jetwell</span>
     </span>
   );
 }

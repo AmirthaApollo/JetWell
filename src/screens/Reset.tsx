@@ -5,9 +5,9 @@ import { useReducedMotion } from '../components/hooks';
 type ToolId = 'winddown' | 'breathing' | 'light' | 'stretch' | 'nap';
 
 const TOOLS: { id: ToolId; title: string; icon: IconName; blurb: string }[] = [
-  { id: 'winddown', title: 'Wind-down timer', icon: 'sleep', blurb: 'A screen-free countdown that dims to help you settle.' },
+  { id: 'winddown', title: 'Wind-down timer', icon: 'sleep', blurb: 'A screen-free countdown that dims.' },
   { id: 'breathing', title: 'Breathing', icon: 'globe', blurb: 'In 4, hold 4, out 6. A few quiet minutes.' },
-  { id: 'light', title: 'Light break', icon: 'light', blurb: 'Get outside for 10–15 minutes at the right time.' },
+  { id: 'light', title: 'Light break', icon: 'light', blurb: 'Get outside for 10-15 minutes.' },
   { id: 'stretch', title: 'Quick stretch', icon: 'move', blurb: 'A guided 3-minute stretch, seated-friendly.' },
   { id: 'nap', title: 'Nap timer', icon: 'nap', blurb: 'A short nap with a gentle end.' },
 ];

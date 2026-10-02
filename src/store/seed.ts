@@ -85,9 +85,11 @@ export function tripFromConfig(cfg: SampleConfig, createdAt = Date.now()): Trip 
     destId: d.id,
     originCity: o.city,
     originCode: o.code,
+    originCountry: o.country,
     originTz: o.tz,
     destCity: d.city,
     destCode: d.code,
+    destCountry: d.country,
     destTz: d.tz,
     departureISO: departure.toISOString(),
     arrivalISO: arrival.toISOString(),
@@ -114,9 +116,11 @@ export function pastTrip(): Trip {
     destId: d.id,
     originCity: o.city,
     originCode: o.code,
+    originCountry: o.country,
     originTz: o.tz,
     destCity: d.city,
     destCode: d.code,
+    destCountry: d.country,
     destTz: d.tz,
     departureISO: departure.toISOString(),
     arrivalISO: arrival.toISOString(),
@@ -137,6 +141,7 @@ export function seedTrips(): Trip[] {
 }
 
 export function tripToInput(trip: Trip): TripInput {
+  const lows = trip.layovers ?? (trip.layover ? [trip.layover] : []);
   return {
     originTz: trip.originTz,
     destTz: trip.destTz,
@@ -149,14 +154,12 @@ export function tripToInput(trip: Trip): TripInput {
     stay: trip.stay,
     crewMode: trip.crewMode,
     meetingAt: trip.meetingAtISO ? new Date(trip.meetingAtISO) : null,
-    layover: trip.layover
-      ? {
-          city: trip.layover.city,
-          code: trip.layover.code,
-          tz: trip.layover.tz,
-          start: new Date(trip.layover.startISO),
-          end: new Date(trip.layover.endISO),
-        }
-      : null,
+    layovers: lows.map((l) => ({
+      city: l.city,
+      code: l.code,
+      tz: l.tz,
+      start: new Date(l.startISO),
+      end: new Date(l.endISO),
+    })),
   };
 }

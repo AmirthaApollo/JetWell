@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlan, currentItem, nextItem, type TripInput } from './planEngine';
+import {
+  buildPlan,
+  currentItem,
+  nextItem,
+  evaluateSchedule,
+  mealTips,
+  EATING_TIPS,
+  scheduleItemInstant,
+  type ScheduleItem,
+  type TripInput,
+} from './planEngine';
 import { parseLocalInput, getOffsetMinutes } from '../lib/time';
 
 function makeInput(partial: Partial<TripInput> & Pick<TripInput, 'originTz' | 'destTz' | 'departure' | 'arrival'>): TripInput {
@@ -18,7 +28,7 @@ const LHR = 'Europe/London';
 const NYC = 'America/New_York';
 const SIN = 'Asia/Singapore';
 
-describe('plan engine — direction and shift', () => {
+describe('plan engine: direction and shift', () => {
   it('DEL → LHR in winter is westbound ~5h30 behind', () => {
     const dep = parseLocalInput('2026-01-15T02:00', DEL)!;
     const arr = parseLocalInput('2026-01-15T07:00', LHR)!;
@@ -57,7 +67,7 @@ describe('plan engine — direction and shift', () => {
   });
 });
 
-describe('plan engine — strategies', () => {
+describe('plan engine: strategies', () => {
   function plan(overrides: Partial<TripInput> = {}) {
     const dep = parseLocalInput('2026-01-15T02:00', DEL)!;
     const arr = parseLocalInput('2026-01-15T07:00', LHR)!;
@@ -84,7 +94,7 @@ describe('plan engine — strategies', () => {
   });
 });
 
-describe('plan engine — output integrity', () => {
+describe('plan engine: output integrity', () => {
   const dep = parseLocalInput('2026-01-15T02:00', DEL)!;
   const arr = parseLocalInput('2026-01-15T07:00', LHR)!;
   const p = buildPlan(makeInput({ originTz: DEL, destTz: LHR, departure: dep, arrival: arr }));
@@ -129,7 +139,7 @@ describe('plan engine — output integrity', () => {
   });
 });
 
-describe('plan engine — layover and meeting', () => {
+describe('plan engine: layover and meeting', () => {
   it('adds layover guidance for connections over four hours', () => {
     const dep = parseLocalInput('2026-01-15T02:00', DEL)!;
     const layStart = parseLocalInput('2026-01-15T07:00', LHR)!;
@@ -169,5 +179,65 @@ describe('current/next item helpers', () => {
     expect(cur.current!.at).toBeLessThanOrEqual(mid);
     const nxt = nextItem(p.items, mid);
     if (nxt) expect(nxt.at).toBeGreaterThan(mid);
+  });
+});
+
+describe('plan engine: multiple connections', () => {
+  it('adds guidance for each layover', () => {
+    const dep = parseLocalInput('2026-01-15T02:00', DEL)!;
+    const arr = parseLocalInput('2026-01-16T02:00', LHR)!;
+    const p = buildPlan(
+      makeInput({
+        originTz: DEL,
+        destTz: LHR,
+        departure: dep,
+        arrival: arr,
+        layovers: [
+          { city: 'Dubai', code: 'DXB', tz: 'Asia/Dubai', start: new Date(dep.getTime() + 3 * 3600000), end: new Date(dep.getTime() + 9 * 3600000) },
+          { city: 'Istanbul', code: 'IST', tz: 'Europe/Istanbul', start: new Date(dep.getTime() + 11 * 3600000), end: new Date(dep.getTime() + 16 * 3600000) },
+        ],
+      }),
+    );
+    expect(p.items.some((i) => i.id.startsWith('layover') && i.id.endsWith('lo0'))).toBe(true);
+    expect(p.items.some((i) => i.id.startsWith('layover') && i.id.endsWith('lo1'))).toBe(true);
+  });
+});
+
+describe('schedule evaluation', () => {
+  const arr = parseLocalInput('2026-01-15T07:00', LHR)!;
+
+  function item(day: number, startMin: number): ScheduleItem {
+    return { id: 'x' + day + startMin, tripId: 't', day, title: 'Standup', startMin, endMin: startMin + 60, type: 'meeting' };
+  }
+
+  it('anchors schedule items to destination local midnight and advances by day', () => {
+    const d1 = scheduleItemInstant(item(1, 9 * 60), arr.getTime(), LHR);
+    const d2 = scheduleItemInstant(item(2, 9 * 60), arr.getTime(), LHR);
+    expect(d2 - d1).toBe(86400000);
+  });
+
+  it('flags a commitment that lands in the home biological night', () => {
+    // 02:00 in London is 07:30 in Delhi; 01:00 London is 06:30 Delhi (still bio-night edge).
+    const early = evaluateSchedule([item(1, 60)], { arrival: arr.getTime(), destTz: LHR, originTz: DEL });
+    expect(early.length).toBe(1);
+    expect(early[0].message).toMatch(/biological night|early start/i);
+  });
+
+  it('does not flag an ordinary daytime meeting', () => {
+    const ok = evaluateSchedule([item(1, 14 * 60)], { arrival: arr.getTime(), destTz: LHR, originTz: DEL });
+    expect(ok.length).toBe(0);
+  });
+});
+
+describe('eating tips', () => {
+  const arr = parseLocalInput('2026-01-15T07:00', LHR)!;
+  it('returns one meal card per day', () => {
+    const tips = mealTips({ arrival: arr.getTime(), destTz: LHR, dayCount: 5 });
+    expect(tips).toHaveLength(5);
+    expect(tips[0].text).toMatch(/light/i);
+  });
+  it('ships a set of short eating tips', () => {
+    expect(EATING_TIPS.length).toBeGreaterThan(3);
+    expect(EATING_TIPS.join(' ')).toMatch(/caffeine/i);
   });
 });

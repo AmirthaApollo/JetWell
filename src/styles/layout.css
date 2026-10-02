@@ -34,7 +34,7 @@
   display: flex;
   flex-direction: column;
   gap: 26px;
-  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  background: linear-gradient(180deg, var(--paper) 0%, #eef3ff 100%);
 }
 .wordmark {
   display: inline-flex;
@@ -70,11 +70,14 @@
   color: var(--ink);
 }
 .nav-item.active {
-  background: var(--card);
-  color: var(--ink);
-  box-shadow: var(--shadow-1);
-  border: 1px solid var(--hairline);
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  box-shadow: none;
+  border: 1px solid transparent;
   padding: 9px 11px;
+}
+.nav-item.active svg {
+  color: var(--accent);
 }
 .nav-item.active::before {
   content: '';
@@ -94,7 +97,7 @@
   margin-top: auto;
   font-family: var(--serif);
   font-size: 15px;
-  color: var(--muted);
+  color: var(--accent);
   font-style: italic;
 }
 
@@ -150,9 +153,9 @@
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: var(--ink);
-  color: var(--paper);
-  box-shadow: var(--shadow-2);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 10px 26px -10px var(--accent-glow);
   align-items: center;
   justify-content: center;
 }
@@ -165,48 +168,78 @@
   flex-direction: column;
   gap: 70px;
 }
-.hero {
+.flight-hero {
   display: grid;
-  grid-template-columns: 1.05fr 1.1fr;
-  gap: clamp(24px, 4vw, 56px);
+  grid-template-columns: 0.9fr 1.15fr;
+  gap: clamp(24px, 4vw, 52px);
   align-items: center;
-  padding-top: 12px;
+  padding-top: 8px;
+  background: radial-gradient(115% 130% at 78% 8%, var(--accent-wash) 0%, transparent 56%);
 }
-.hero h1 {
-  font-size: clamp(54px, 8vw, 96px);
+.flight-hero h1 {
+  font-size: clamp(52px, 7vw, 84px);
   letter-spacing: -0.03em;
   line-height: 0.98;
 }
-.hero .lede {
-  font-size: clamp(16px, 1.6vw, 19px);
+.flight-hero .lede {
+  font-size: clamp(16px, 1.5vw, 18px);
   color: var(--ink-soft);
-  max-width: 46ch;
-  margin-top: 20px;
+  max-width: 34ch;
+  margin-top: 18px;
 }
-.hero .pre {
-  font-family: var(--serif);
-  font-size: 15px;
-  letter-spacing: 0.02em;
-  color: var(--accent-ink);
-  margin-bottom: 18px;
+.flight-hero .pre {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
   display: block;
+}
+.hero-ticket {
+  min-width: 0;
 }
 .cta-row {
   display: flex;
   gap: 12px;
-  margin-top: 30px;
+  margin-top: 28px;
   flex-wrap: wrap;
+}
+.example-link {
+  display: inline-block;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--hairline-strong);
+}
+.example-link:hover {
+  text-decoration-color: var(--accent);
 }
 .benefits {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 14px;
 }
 .benefit {
   padding: 22px;
   border-radius: var(--r-lg);
   background: var(--card);
   border: 1px solid var(--hairline);
+}
+.benefit.compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+}
+.benefit.compact svg {
+  color: var(--accent);
+  flex: none;
 }
 .benefit .b-ico {
   color: var(--accent);
@@ -226,25 +259,20 @@
   gap: 14px;
 }
 .how-step {
-  position: relative;
-  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
   border-radius: var(--r);
   background: var(--paper-2);
   border: 1px solid var(--hairline);
+  font-size: 14.5px;
+  font-weight: 500;
 }
 .how-step .num {
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--muted);
-}
-.how-step h4 {
-  margin-top: 8px;
-  font-size: 18px;
-}
-.how-step p {
-  color: var(--muted);
-  font-size: 13.5px;
-  margin-top: 6px;
+  color: var(--accent);
 }
 .footer-note {
   border-top: 1px solid var(--hairline);
@@ -403,7 +431,7 @@
 }
 .segmented button.on {
   background: var(--card);
-  color: var(--ink);
+  color: var(--accent-ink);
   box-shadow: var(--shadow-1);
 }
 .planner-foot {
@@ -423,6 +451,29 @@
   display: flex;
   gap: 12px;
   align-items: flex-start;
+}
+.tz-callout.error {
+  background: #fbeceb;
+  color: #9a3b30;
+}
+.connection-row {
+  display: grid;
+  grid-template-columns: 1fr 110px auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.connection-row:last-child {
+  border-bottom: none;
+}
+.conn-hours {
+  min-width: 0;
+}
+.conn-remove {
+  margin-bottom: 2px;
+  color: var(--muted);
+}
 }
 .example-strip {
   display: flex;
@@ -583,13 +634,13 @@
   .content {
     padding: 22px 18px 130px;
   }
-  .hero {
+  .flight-hero {
     grid-template-columns: 1fr;
-    gap: 30px;
+    gap: 26px;
     padding-top: 4px;
   }
-  .hero h1 {
-    font-size: clamp(48px, 15vw, 72px);
+  .flight-hero h1 {
+    font-size: clamp(46px, 14vw, 68px);
   }
   .benefits,
   .how {
