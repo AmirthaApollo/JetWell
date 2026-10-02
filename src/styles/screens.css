@@ -348,46 +348,47 @@
 
 /* ============ Itinerary ============ */
 .dayarc {
-  padding: 22px 24px 14px;
+  padding: 22px 24px 16px;
   margin-bottom: 26px;
+}
+.dayarc-head {
+  margin-bottom: 4px;
+}
+.dayarc-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 5px;
 }
 .dayarc-svg {
   display: block;
   margin-top: 12px;
 }
-.dayarc-label {
-  fill: var(--muted);
-  font-size: 12px;
-}
-.dayarc-now {
-  fill: var(--accent-ink);
+.arc-tick-label {
+  fill: var(--muted-2);
   font-size: 11px;
+}
+.arc-row-label {
+  fill: var(--ink-soft);
+  font-size: 13px;
   font-weight: 600;
 }
-.arc-legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 4px 2px 8px;
-  font-size: 12px;
-  color: var(--muted);
+.arc-day-label {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--sans);
 }
-.arc-key {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+.arc-day-date {
+  fill: var(--muted);
+  font-size: 11.5px;
+  font-family: var(--mono);
 }
-.arc-swatch {
-  width: 14px;
-  height: 8px;
-  border-radius: 4px;
-  display: inline-block;
-}
-.now-swatch {
-  background: var(--accent);
-  width: 3px;
-  height: 14px;
-  border-radius: 2px;
+.arc-now-pill {
+  fill: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .timeline {
