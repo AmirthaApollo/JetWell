@@ -41,6 +41,14 @@ describe('custom cities (anywhere in the world)', () => {
   it('still finds built-in cities with no extras', () => {
     expect(findCity(CITIES[0].id)?.city).toBe(CITIES[0].city);
   });
+
+  it('includes the expanded Indian city list on the India time zone', () => {
+    for (const name of ['Thane', 'Vadodara', 'Thrissur', 'Kollam', 'Tiruppur', 'Ballari', 'Amritsar']) {
+      const hit = CITIES.find((c) => c.city === name);
+      expect(hit, name).toBeTruthy();
+      expect(hit!.tz).toBe('Asia/Kolkata');
+    }
+  });
 });
 
 describe('flight time estimation', () => {
