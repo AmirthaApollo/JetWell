@@ -23,7 +23,7 @@ export function BoardingPass({
     plan.direction === 'eastbound' ? 'Eastbound' : plan.direction === 'westbound' ? 'Westbound' : 'Same zone';
 
   return (
-    <section className={`bpass ticket ${collapsed ? 'collapsed' : ''}`} aria-label="Trip summary">
+    <section className={`bpass ${collapsed ? 'collapsed' : ''}`} aria-label="Trip summary">
       <div className="bpass-main">
         <div className="bpass-top">
           <span className="eyebrow">Boarding pass · recovery plan</span>
@@ -76,12 +76,24 @@ export function BoardingPass({
           )}
         </div>
       </div>
-      <div className="bpass-code">
-        <Barcode seed={trip.id + trip.originCode + trip.destCode} height={34} />
+
+      <div className="bpass-perf" aria-hidden="true">
+        <span className="bpass-perf-plane">
+          <Icon name="plane" size={13} />
+        </span>
       </div>
-      <div className="bpass-strategy">
-        <span className="s-label">Strategy</span>
-        {plan.strategyLine}
+
+      <div className="bpass-stub">
+        <div className="bpass-code">
+          <Barcode seed={trip.id + trip.originCode + trip.destCode} height={44} />
+          <div className="bpass-code-label mono">
+            {trip.originCode} · {trip.destCode} · {trip.id.slice(0, 8).toUpperCase()}
+          </div>
+        </div>
+        <div className="bpass-strategy">
+          <span className="s-label">Strategy</span>
+          {plan.strategyLine}
+        </div>
       </div>
     </section>
   );

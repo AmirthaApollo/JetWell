@@ -166,9 +166,13 @@
 
 /* ============ Boarding pass ============ */
 .bpass {
-  --notch-y: 118px;
+  position: relative;
   overflow: hidden;
   margin-bottom: 20px;
+  background: var(--card);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
 }
 .bpass-main {
   padding: 26px 28px 20px;
@@ -236,17 +240,70 @@
   gap: 8px;
   margin-top: 18px;
 }
-.bpass-strategy {
-  padding: 20px 28px;
+/* perforation between the pass and the stub */
+.bpass-perf {
+  position: relative;
+  height: 0;
+  margin: 4px 22px;
+  border-top: 2px dashed var(--hairline-strong);
+}
+.bpass-perf::before,
+.bpass-perf::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  transform: translateY(-50%);
+}
+.bpass-perf::before {
+  left: -33px;
+}
+.bpass-perf::after {
+  right: -33px;
+}
+.bpass-perf-plane {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--hairline-strong);
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+}
+.bpass-stub {
   background: var(--paper-2);
+}
+.bpass-code {
+  width: 100%;
+  padding: 18px 28px 12px;
+  opacity: 1;
+}
+.bpass-code svg {
+  display: block;
+  width: 100%;
+  height: 46px;
+}
+.bpass-code-label {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bpass-strategy {
+  padding: 16px 28px 22px;
   border-top: 1px dashed var(--hairline-strong);
   font-size: 14.5px;
   color: var(--ink-soft);
-}
-.bpass-code {
-  padding: 14px 28px 0;
-  max-width: 240px;
-  opacity: 0.85;
 }
 .bpass-strategy .s-label {
   font-size: 11px;
@@ -1662,6 +1719,8 @@
   }
   .bpass.collapsed .bpass-times,
   .bpass.collapsed .bpass-strategy,
+  .bpass.collapsed .bpass-stub,
+  .bpass.collapsed .bpass-perf,
   .bpass.collapsed .bpass-tags {
     display: none;
   }
