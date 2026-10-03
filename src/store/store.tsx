@@ -4,7 +4,7 @@ import type { AppState, CheckIn, PlannerDraft, Prefs, RecoveryScore, ScheduleIte
 import { seedTrips, uid } from './seed';
 import type { City } from '../data/cities';
 
-const KEY = 'jetwell:v1';
+const KEY = 'jetwell:v2';
 
 const defaultPrefs: Prefs = {
   homeCityId: 'del',
@@ -29,20 +29,30 @@ const defaultRecovery = (trips: Trip[]): RecoveryScore[] => {
 };
 
 function freshState(): AppState {
-  const trips = seedTrips();
   return {
-    trips,
-    activeTripId: 'demo-del-lhr',
+    trips: [],
+    activeTripId: null,
     completed: {},
     packing: {},
     schedule: [],
     prefs: defaultPrefs,
     checkins: [],
-    recovery: defaultRecovery(trips),
+    recovery: [],
     dismissedTips: {},
     customCities: [],
     draft: null,
     seededAt: Date.now(),
+  };
+}
+
+/** The sample set, loaded only on demand (e.g. "Reset demo data"). */
+export function seededState(): AppState {
+  const trips = seedTrips();
+  return {
+    ...freshState(),
+    trips,
+    activeTripId: 'demo-del-lhr',
+    recovery: defaultRecovery(trips),
   };
 }
 
@@ -51,7 +61,7 @@ function load(): AppState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return freshState();
     const parsed = JSON.parse(raw) as AppState;
-    if (!parsed.trips || !Array.isArray(parsed.trips) || parsed.trips.length === 0) return freshState();
+    if (!parsed || !Array.isArray(parsed.trips)) return freshState();
     return {
       ...freshState(),
       ...parsed,
@@ -286,7 +296,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetDemo = useCallback(() => {
-    setState(freshState());
+    setState(seededState());
   }, []);
 
   const clearAll = useCallback(() => {

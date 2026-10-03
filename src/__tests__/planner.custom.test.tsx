@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { App } from '../App';
-import { StoreProvider } from '../store/store';
+import { StoreProvider, seededState } from '../store/store';
 import { ToastProvider } from '../components/Toast';
 
 function renderApp() {
@@ -17,6 +17,7 @@ function renderApp() {
 
 beforeEach(() => {
   localStorage.clear();
+  localStorage.setItem('jetwell:v2', JSON.stringify(seededState()));
   window.location.hash = '';
   window.matchMedia = ((q: string) => ({
     matches: false,

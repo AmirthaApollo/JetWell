@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, cleanup } from '@testing-library/react';
 import { App } from '../App';
-import { StoreProvider } from '../store/store';
+import { StoreProvider, seededState } from '../store/store';
 import { ToastProvider } from '../components/Toast';
 
 function renderApp() {
@@ -17,6 +17,7 @@ function renderApp() {
 
 beforeEach(() => {
   localStorage.clear();
+  localStorage.setItem('jetwell:v2', JSON.stringify(seededState()));
   window.location.hash = '';
   window.matchMedia = ((q: string) => ({
     matches: false,
@@ -45,6 +46,14 @@ describe('app smoke tests', () => {
     renderApp();
     expect(screen.getByRole('heading', { name: /Beat jet lag/i })).toBeTruthy();
     expect(screen.getByText(/Enter your flight, see how your body clock/i)).toBeTruthy();
+  });
+
+  it('starts with no flights on a brand-new open', () => {
+    localStorage.clear();
+    renderApp();
+    enterApp();
+    fireEvent.click(screen.getAllByText('Itinerary')[0]);
+    expect(screen.getByText(/No trip yet/i)).toBeTruthy();
   });
 
   it('renders the seeded itinerary after navigating', () => {
