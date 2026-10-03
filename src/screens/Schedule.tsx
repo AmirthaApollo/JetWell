@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useRouter } from '../router';
 import { useStore } from '../store/store';
 import { Icon } from '../components/Icon';
+import { SectionHead } from '../components/SectionHead';
+import { Divider } from '../components/Divider';
 import { evaluateSchedule, type ScheduleItem, type ScheduleType } from '../engine/planEngine';
 import { tripToInput } from '../store/seed';
 import { buildPlan } from '../engine/planEngine';
@@ -115,14 +117,13 @@ export function Schedule() {
 
   return (
     <div className="screen" style={{ maxWidth: 720 }}>
-      <div className="section-head">
-        <div>
-          <div className="eyebrow">Days after landing · {activeTrip.destCity} local time</div>
-          <h2 style={{ fontSize: 30, marginTop: 4 }}>Add my schedule</h2>
-        </div>
-      </div>
-      <p className="muted" style={{ marginBottom: 22, maxWidth: '54ch' }}>
-        Add anything fixed you have to be awake for. We will flag the ones that clash with your body clock and plan around them.
+      <SectionHead
+        icon="clock"
+        eyebrow={`Days after landing · ${activeTrip.destCity} time`}
+        title="Commitments"
+      />
+      <p className="muted" style={{ marginBottom: 22, maxWidth: '52ch' }}>
+        Add anything fixed you have to be awake for. We flag the ones that clash with your body clock.
       </p>
 
       <div className="day-tabs" role="tablist" aria-label="Days after landing">
@@ -236,7 +237,9 @@ export function Schedule() {
         </p>
       )}
 
-      <div className="row gap-12" style={{ marginTop: 24, flexWrap: 'wrap' }}>
+      <Divider icon="clock" />
+
+      <div className="row gap-12" style={{ flexWrap: 'wrap' }}>
         <button className="btn btn-primary" onClick={() => navigate('itinerary')}>
           See my recovery plan <Icon name="arrow" size={16} />
         </button>

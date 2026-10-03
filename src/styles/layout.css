@@ -6,6 +6,12 @@
   position: relative;
   z-index: 1;
 }
+.app.home {
+  grid-template-columns: 1fr;
+}
+.app.home .content {
+  padding: 40px clamp(22px, 6vw, 88px) 100px;
+}
 .main {
   min-width: 0;
   display: flex;
@@ -34,7 +40,7 @@
   display: flex;
   flex-direction: column;
   gap: 26px;
-  background: linear-gradient(180deg, var(--paper) 0%, #eef3ff 100%);
+  background: linear-gradient(180deg, var(--paper) 0%, var(--accent-wash) 100%);
 }
 .wordmark {
   display: inline-flex;
@@ -47,6 +53,15 @@
 }
 .wm-mark {
   flex: none;
+}
+.wm-badge {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
 }
 .nav {
   display: flex;
@@ -77,7 +92,7 @@
   padding: 9px 11px;
 }
 .nav-item.active svg {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .nav-item.active::before {
   content: '';
@@ -97,7 +112,7 @@
   margin-top: auto;
   font-family: var(--serif);
   font-size: 15px;
-  color: var(--accent);
+  color: var(--accent-ink);
   font-style: italic;
 }
 
@@ -110,7 +125,7 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(250, 248, 244, 0.86);
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--hairline);
 }
@@ -121,11 +136,11 @@
   right: 0;
   bottom: 0;
   z-index: 50;
-  background: rgba(250, 248, 244, 0.94);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--hairline);
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
 }
 .tab {
   display: flex;
@@ -154,126 +169,13 @@
   height: 54px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   box-shadow: 0 10px 26px -10px var(--accent-glow);
   align-items: center;
   justify-content: center;
 }
 
-/* ============ Landing ============ */
-.landing {
-  max-width: 1080px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 70px;
-}
-.flight-hero {
-  display: grid;
-  grid-template-columns: 0.9fr 1.15fr;
-  gap: clamp(24px, 4vw, 52px);
-  align-items: center;
-  padding-top: 8px;
-  background: radial-gradient(115% 130% at 78% 8%, var(--accent-wash) 0%, transparent 56%);
-}
-.flight-hero h1 {
-  font-size: clamp(52px, 7vw, 84px);
-  letter-spacing: -0.03em;
-  line-height: 0.98;
-}
-.flight-hero .lede {
-  font-size: clamp(16px, 1.5vw, 18px);
-  color: var(--ink-soft);
-  max-width: 34ch;
-  margin-top: 18px;
-}
-.flight-hero .pre {
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 16px;
-  display: block;
-}
-.hero-ticket {
-  min-width: 0;
-}
-.cta-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 28px;
-  flex-wrap: wrap;
-}
-.example-link {
-  display: inline-block;
-  margin-top: 16px;
-  font-size: 13.5px;
-  color: var(--accent-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--hairline-strong);
-}
-.example-link:hover {
-  text-decoration-color: var(--accent);
-}
-.benefits {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-.benefit {
-  padding: 22px;
-  border-radius: var(--r-lg);
-  background: var(--card);
-  border: 1px solid var(--hairline);
-}
-.benefit.compact {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 20px;
-  color: var(--ink-soft);
-  font-size: 14px;
-  font-weight: 500;
-}
-.benefit.compact svg {
-  color: var(--accent);
-  flex: none;
-}
-.benefit .b-ico {
-  color: var(--accent);
-  margin-bottom: 12px;
-}
-.benefit h3 {
-  font-size: 18px;
-}
-.benefit p {
-  color: var(--muted);
-  font-size: 14px;
-  margin-top: 6px;
-}
-.how {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
-.how-step {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 20px;
-  border-radius: var(--r);
-  background: var(--paper-2);
-  border: 1px solid var(--hairline);
-  font-size: 14.5px;
-  font-weight: 500;
-}
-.how-step .num {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--accent);
-}
+/* ============ Landing (see landing.css) ============ */
 .footer-note {
   border-top: 1px solid var(--hairline);
   padding-top: 22px;
@@ -283,13 +185,57 @@
 }
 .section-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 .section-head h2 {
   font-size: 26px;
+}
+.sh-left {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.sh-icon {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  background: var(--accent-wash);
+  border: 1px solid var(--hairline);
+}
+.sh-title {
+  line-height: 1.05;
+}
+
+/* Perforated separator with a small travel motif */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 44px 0;
+}
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-image: linear-gradient(90deg, var(--hairline-strong) 0 6px, transparent 6px 12px);
+  background-size: 12px 1px;
+}
+.divider-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  background: var(--accent-wash);
+  border: 1px solid var(--hairline);
 }
 
 /* ============ Planner ============ */
@@ -339,6 +285,11 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+.datetime-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
 }
 .field label {
   display: block;
@@ -404,7 +355,7 @@
 .option.sel .o-mark {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 .option .o-title {
   font-weight: 600;
@@ -474,6 +425,24 @@
   margin-bottom: 2px;
   color: var(--muted);
 }
+.commitment-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 18px;
+}
+.commitment-remove {
+  margin-bottom: 2px;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .commitment-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .commitment-row .field:first-child {
+    grid-column: 1 / -1;
+  }
 }
 .example-strip {
   display: flex;
@@ -535,6 +504,22 @@
   background: var(--accent-wash);
   padding: 3px 7px;
   border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+}
+.citysearch .results-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--paper-2);
+}
+.citysearch .results-head .tiny {
+  margin-left: auto;
+  text-align: right;
 }
 .picked {
   display: flex;
@@ -647,6 +632,9 @@
     grid-template-columns: 1fr;
   }
   .field-grid {
+    grid-template-columns: 1fr;
+  }
+  .datetime-grid {
     grid-template-columns: 1fr;
   }
   .landing {

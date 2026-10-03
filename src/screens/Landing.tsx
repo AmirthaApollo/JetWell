@@ -1,100 +1,151 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from '../router';
 import { useStore } from '../store/store';
-import { FlightTicket } from '../components/FlightTicket';
+import { CitySearch } from '../components/CitySearch';
 import { Icon } from '../components/Icon';
-import { buildPlan } from '../engine/planEngine';
-import { tripToInput } from '../store/seed';
+import { LogoMark } from '../components/LogoMark';
+import { estimateFlightMinutes, findCity, type City } from '../data/cities';
+import { formatDuration, getOffsetMinutes, parseLocalInput } from '../lib/time';
+
+function isoDate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function wrapShift(minutes: number): number {
+  if (minutes > 720) return minutes - 1440;
+  if (minutes < -720) return minutes + 1440;
+  return minutes;
+}
 
 export function Landing() {
   const { navigate } = useRouter();
-  const { trips, setActive, activeTrip, prefs } = useStore();
+  const { addCustomCity, customCities, setDraft } = useStore();
 
-  const upcoming = useMemo(() => {
-    const now = Date.now();
-    if (activeTrip && new Date(activeTrip.arrivalISO).getTime() > now) return activeTrip;
-    const future = trips
-      .filter((t) => new Date(t.arrivalISO).getTime() > now)
-      .sort((a, b) => new Date(a.departureISO).getTime() - new Date(b.departureISO).getTime());
-    return future[0] ?? trips[0] ?? null;
-  }, [trips, activeTrip]);
+  const [from, setFrom] = useState<City | null>(() => findCity('del') ?? null);
+  const [to, setTo] = useState<City | null>(() => findCity('lhr') ?? null);
+  const [date, setDate] = useState(() => isoDate(new Date(Date.now() + 3 * 86400000)));
 
-  const plan = useMemo(() => (upcoming ? buildPlan(tripToInput(upcoming)) : null), [upcoming]);
+  const info = useMemo(() => {
+    if (!from || !to) return null;
+    const dep = parseLocalInput(`${date}T12:00`, from.tz) ?? new Date();
+    const shift = wrapShift(getOffsetMinutes(dep, to.tz) - getOffsetMinutes(dep, from.tz));
+    const abs = Math.abs(shift);
+    const sign = shift > 0 ? '+' : shift < 0 ? '−' : '';
+    const flight = estimateFlightMinutes(from, to) ?? 530;
+    return { abs, sign, flight };
+  }, [from, to, date]);
 
-  function openPlan() {
-    if (upcoming) setActive(upcoming.id);
-    navigate('itinerary');
+  function pick(setter: (c: City | null) => void) {
+    return (c: City | null) => {
+      if (c?.custom) addCustomCity(c);
+      setter(c);
+    };
   }
 
-  function tryExample() {
-    const demo = trips.find((t) => t.isDemo) ?? trips[0];
-    if (demo) setActive(demo.id);
-    navigate('journey');
+  function create() {
+    if (!from || !to) return;
+    setDraft({ origin: from, dest: to, depStr: `${date}T02:00` });
+    navigate('plan');
   }
 
   return (
     <div className="landing">
-      <section className="flight-hero">
-        <div className="hero-copy">
-          <span className="pre">Your next trip</span>
-          <h1>Land ready.</h1>
-          <p className="lede">A recovery plan for your body clock when you cross time zones.</p>
-          <div className="cta-row">
-            <button className="btn btn-primary" onClick={() => navigate('plan')}>
-              Plan my trip <Icon name="arrow" size={17} />
-            </button>
-            <button className="btn btn-ghost" onClick={openPlan}>
-              Open my plan
+      <nav className="jw-nav" aria-label="JetWell">
+        <span className="jw-brand">
+          <LogoMark size={24} />
+          JetWell
+        </span>
+        <div className="jw-nav-spacer" />
+        <button className="jw-btn jw-btn-primary" onClick={() => navigate('plan')}>
+          Get Started <Icon name="arrow" size={16} />
+        </button>
+      </nav>
+
+      <section className="jw-hero">
+        <div className="jw-hero-copy">
+          <h1>
+            Beat jet lag.
+            <br />
+            Feel like yourself again.
+          </h1>
+          <p className="jw-lede">
+            Enter your flight, see how your body clock will shift, and get a personalised recovery plan.
+          </p>
+          <div className="jw-hero-cta">
+            <button className="jw-btn jw-btn-primary" onClick={() => navigate('plan')}>
+              Plan my recovery <Icon name="arrow" size={17} />
             </button>
           </div>
-          <button className="example-link" onClick={tryExample}>
-            Try an example: Delhi to London
-          </button>
         </div>
-        <div className="hero-ticket">
-          <FlightTicket
-            trip={upcoming}
-            plan={plan}
-            hour12={prefs.hour12}
-            onOpen={openPlan}
-            onNew={() => navigate('plan')}
-          />
+
+        <div className="jw-hero-visual">
+          <div className="jw-ticket">
+            <div className="jw-ticket-top">
+              <span className="jw-ticket-brand">JETWELL</span>
+              <span className="jw-ticket-label">Your recovery journey</span>
+            </div>
+
+            <div className="jw-route">
+              <div className="jw-end">
+                <div className="jw-code">{from?.code ?? '—'}</div>
+                <div className="jw-city">{from?.city ?? 'From'}</div>
+              </div>
+              <div className="jw-flightpath">
+                <svg className="jw-path-svg" viewBox="0 0 160 44" aria-hidden="true">
+                  <path
+                    d="M6 34 C 48 8, 112 8, 154 34"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray="0.5 8"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="6" cy="34" r="3.4" fill="currentColor" />
+                  <circle cx="154" cy="34" r="3.4" fill="currentColor" />
+                </svg>
+                <div className="jw-flight-meta">
+                  {info ? `${formatDuration(info.flight)} · ${info.sign}${formatDuration(info.abs)}` : 'Add your flight'}
+                </div>
+              </div>
+              <div className="jw-end right">
+                <div className="jw-code">{to?.code ?? '—'}</div>
+                <div className="jw-city">{to?.city ?? 'To'}</div>
+              </div>
+            </div>
+
+            <div className="jw-form">
+              <CitySearch
+                label="Flying from"
+                value={from}
+                onPick={pick(setFrom)}
+                cities={customCities}
+                placeholder="Search any city"
+              />
+              <CitySearch
+                label="Flying to"
+                value={to}
+                onPick={pick(setTo)}
+                cities={customCities}
+                placeholder="Search any city"
+              />
+              <div className="jw-field jw-field-date">
+                <label htmlFor="jw-date">Departure date</label>
+                <input
+                  id="jw-date"
+                  type="date"
+                  className="input"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value || date)}
+                />
+              </div>
+              <button className="jw-btn jw-btn-primary jw-create" onClick={create}>
+                Create plan
+              </button>
+            </div>
+          </div>
         </div>
       </section>
-
-      <section className="benefits">
-        <div className="benefit compact">
-          <Icon name="bed" size={20} />
-          <span>Know when to sleep, and when not to</span>
-        </div>
-        <div className="benefit compact">
-          <Icon name="light" size={20} />
-          <span>Get light at the right time</span>
-        </div>
-        <div className="benefit compact">
-          <Icon name="spark" size={20} />
-          <span>Arrive feeling like yourself</span>
-        </div>
-      </section>
-
-      <section className="how">
-        <div className="how-step">
-          <span className="num mono">01</span>
-          <span>Add your flight</span>
-        </div>
-        <div className="how-step">
-          <span className="num mono">02</span>
-          <span>Get your timeline</span>
-        </div>
-        <div className="how-step">
-          <span className="num mono">03</span>
-          <span>Follow it, loosely</span>
-        </div>
-      </section>
-
-      <footer className="footer-note">
-        Jetwell offers general wellness guidance and is not a medical device or diagnostic tool.
-      </footer>
     </div>
   );
 }

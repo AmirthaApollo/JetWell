@@ -68,13 +68,20 @@ export function Reset() {
   return (
     <div className="screen">
       <div className="section-head">
-        <div>
-          <div className="eyebrow">In the moment</div>
-          <h2 style={{ fontSize: 30, marginTop: 4 }}>Reset</h2>
+        <div className="sh-left">
+          <span className="sh-icon" aria-hidden="true">
+            <Icon name="light" size={18} />
+          </span>
+          <div>
+            <div className="moment-title">In the moment</div>
+            <h2 className="sh-title" style={{ fontSize: 30 }}>
+              Reset
+            </h2>
+          </div>
         </div>
       </div>
       <p className="muted" style={{ marginBottom: 24, maxWidth: '52ch' }}>
-        Small tools for the middle of the night or the middle of a long flight. Nothing here is complicated.
+        Small tools for the middle of the night or a long flight.
       </p>
       <div className="tool-grid">
         {TOOLS.map((t) => (

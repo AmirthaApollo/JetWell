@@ -1,4 +1,5 @@
 import type { CaffeineHabit, PrepLevel, ScheduleItem, StayLength } from '../engine/planEngine';
+import type { City } from '../data/cities';
 
 export interface Layover {
   city: string;
@@ -38,8 +39,13 @@ export interface Trip {
   label?: string;
 }
 
-export interface Prefs {
-  homeCityId: string;
+export interface PlannerDraft {
+  origin: City;
+  dest: City;
+  depStr: string; // 'YYYY-MM-DDTHH:mm' in origin local time
+}
+
+export interface Prefs {  homeCityId: string;
   bedtime: number;
   wake: number;
   caffeine: CaffeineHabit;
@@ -74,6 +80,8 @@ export interface AppState {
   checkins: CheckIn[];
   recovery: RecoveryScore[];
   dismissedTips: Record<string, boolean>;
+  customCities: City[];
+  draft: PlannerDraft | null;
   seededAt: number | null;
 }
 

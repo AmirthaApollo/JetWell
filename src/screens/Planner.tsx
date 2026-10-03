@@ -4,8 +4,9 @@ import { useStore } from '../store/store';
 import { CitySearch } from '../components/CitySearch';
 import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toast';
-import type { City } from '../data/cities';
+import { estimateFlightMinutes, findCity, type City } from '../data/cities';
 import {
+  formatDateTime,
   formatDuration,
   getOffsetMinutes,
   getZonedParts,
@@ -13,8 +14,9 @@ import {
   toLocalInput,
   zonedToInstant,
   addDaysToParts,
+  dayDiff,
 } from '../lib/time';
-import type { CaffeineHabit, PrepLevel, StayLength } from '../engine/planEngine';
+import type { CaffeineHabit, PrepLevel, ScheduleType, StayLength } from '../engine/planEngine';
 import { SAMPLE_CONFIGS, tripFromConfig, uid } from '../store/seed';
 import type { Trip } from '../store/types';
 
@@ -26,53 +28,155 @@ function defaultDeparture(tz: string): string {
   return toLocalInput(zonedToInstant(d.year, d.month, d.day, 2, 0, tz), tz);
 }
 
-function addHoursToInput(value: string, tz: string, hours: number): string {
-  const base = parseLocalInput(value, tz);
-  if (!base) return value;
-  return toLocalInput(new Date(base.getTime() + hours * 3600000), tz);
+function toMin(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
 }
 
-export function Planner() {
+const MINUTE_OPTIONS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+function minToInput(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/** Rebuild a pickable place from a stored trip, including custom destinations. */
+function cityFromTrip(trip: Trip, end: 'origin' | 'dest'): City {
+  const id = end === 'origin' ? trip.originId : trip.destId;
+  const builtin = findCity(id);
+  if (builtin) return builtin;
+  return {
+    id,
+    city: end === 'origin' ? trip.originCity : trip.destCity,
+    code: end === 'origin' ? trip.originCode : trip.destCode,
+    country: (end === 'origin' ? trip.originCountry : trip.destCountry) ?? '',
+    tz: end === 'origin' ? trip.originTz : trip.destTz,
+    custom: true,
+  };
+}
+
+function connectionsFromTrip(trip: Trip): { city: City | null; hours: number }[] {
+  const lows = trip.layovers ?? (trip.layover ? [trip.layover] : []);
+  if (lows.length === 0) return [{ city: null, hours: 5 }];
+  return lows.map((l) => ({
+    city: {
+      id: `layover:${l.code}:${l.tz}`,
+      city: l.city,
+      code: l.code,
+      country: l.country ?? '',
+      tz: l.tz,
+      custom: true,
+    },
+    hours: Math.max(1, Math.round((new Date(l.endISO).getTime() - new Date(l.startISO).getTime()) / 3600000)),
+  }));
+}
+
+export function Planner({ edit = false }: { edit?: boolean }) {
   const { navigate } = useRouter();
-  const { addTrip, trips } = useStore();
+  const { activeTrip, updateTrip, addTrip, addScheduleItem, addCustomCity, customCities, trips, prefs, draft, clearDraft } =
+    useStore();
   const { push } = useToast();
 
+  const editing = edit && activeTrip ? activeTrip : null;
+  const seed = useMemo(() => {
+    if (editing) {
+      return {
+        origin: cityFromTrip(editing, 'origin'),
+        dest: cityFromTrip(editing, 'dest'),
+        depStr: toLocalInput(new Date(editing.departureISO), editing.originTz),
+        durationMin: Math.max(
+          30,
+          Math.round((new Date(editing.arrivalISO).getTime() - new Date(editing.departureISO).getTime()) / 60000),
+        ),
+        bedtime: minToInput(editing.bedtime),
+        wake: minToInput(editing.wake),
+        caffeine: editing.caffeine,
+        prep: editing.prep,
+        stay: editing.stay,
+        crewMode: Boolean(editing.crewMode),
+        meetingStr: editing.meetingAtISO ? toLocalInput(new Date(editing.meetingAtISO), editing.destTz) : '',
+        connections: connectionsFromTrip(editing),
+      };
+    }
+    if (draft) {
+      return {
+        origin: draft.origin,
+        dest: draft.dest,
+        depStr: draft.depStr,
+        durationMin: estimateFlightMinutes(draft.origin, draft.dest) ?? 10 * 60,
+        bedtime: '23:00',
+        wake: '07:00',
+        caffeine: 'two_three' as CaffeineHabit,
+        prep: 'balanced' as PrepLevel,
+        stay: 'medium' as StayLength,
+        crewMode: false,
+        meetingStr: '',
+        connections: [{ city: null, hours: 5 }] as { city: City | null; hours: number }[],
+      };
+    }
+    return null;
+  }, [editing, draft]);
+
   const [step, setStep] = useState(1);
-  const [origin, setOrigin] = useState<City | null>(null);
-  const [dest, setDest] = useState<City | null>(null);
-  const [depStr, setDepStr] = useState('');
-  const [arrStr, setArrStr] = useState('');
-  const [bedtime, setBedtime] = useState('23:00');
-  const [wake, setWake] = useState('07:00');
-  const [caffeine, setCaffeine] = useState<CaffeineHabit>('two_three');
-  const [prep, setPrep] = useState<PrepLevel>('balanced');
-  const [stay, setStay] = useState<StayLength>('medium');
+  const [origin, setOrigin] = useState<City | null>(seed?.origin ?? null);
+  const [dest, setDest] = useState<City | null>(seed?.dest ?? null);
+  const [depStr, setDepStr] = useState(
+    seed?.depStr ?? defaultDeparture(findCity(prefs.homeCityId, customCities)?.tz ?? 'UTC'),
+  );
+  const [durationMin, setDurationMin] = useState(seed?.durationMin ?? 10 * 60);
+  const [durationTouched, setDurationTouched] = useState(Boolean(seed));
+  const [bedtime, setBedtime] = useState(seed?.bedtime ?? '23:00');
+  const [wake, setWake] = useState(seed?.wake ?? '07:00');
+  const [caffeine, setCaffeine] = useState<CaffeineHabit>(seed?.caffeine ?? 'two_three');
+  const [prep, setPrep] = useState<PrepLevel>(seed?.prep ?? 'balanced');
+  const [stay, setStay] = useState<StayLength>(seed?.stay ?? 'medium');
   const [showOptional, setShowOptional] = useState(false);
-  const [crewMode, setCrewMode] = useState(false);
-  const [meetingStr, setMeetingStr] = useState('');
-  const [connections, setConnections] = useState<{ city: City | null; hours: number }[]>([
-    { city: null, hours: 5 },
-  ]);
+  const [crewMode, setCrewMode] = useState(seed?.crewMode ?? false);
+  const [meetingStr, setMeetingStr] = useState(seed?.meetingStr ?? '');
+  const [connections, setConnections] = useState<{ city: City | null; hours: number }[]>(
+    seed?.connections ?? [{ city: null, hours: 5 }],
+  );
+  const [commitments, setCommitments] = useState<
+    { id: string; title: string; date: string; start: string; end: string; type: ScheduleType }[]
+  >([]);
   const [building, setBuilding] = useState(false);
 
-  function pickOrigin(c: City) {
-    if (!c.id) {
-      setOrigin(null);
-      return;
-    }
-    setOrigin(c);
-    const dep = depStr || defaultDeparture(c.tz);
-    setDepStr(dep);
-    if (dest && !arrStr) setArrStr(addHoursToInput(dep, dest.tz, 10));
+  const durH = Math.floor(durationMin / 60);
+  const durM = durationMin % 60;
+
+  function maybeEstimate(o: City | null, d: City | null) {
+    if (durationTouched || !o || !d) return;
+    const est = estimateFlightMinutes(o, d);
+    if (est) setDurationMin(Math.round(est / 5) * 5);
   }
 
-  function pickDest(c: City) {
-    if (!c.id) {
-      setDest(null);
-      return;
+  function pickOrigin(c: City | null) {
+    setOrigin(c);
+    if (c) {
+      if (!depStr) setDepStr(defaultDeparture(c.tz));
+      if (c.custom) addCustomCity(c);
     }
+    maybeEstimate(c, dest);
+  }
+
+  function pickDest(c: City | null) {
     setDest(c);
-    if (depStr && !arrStr) setArrStr(addHoursToInput(depStr, c.tz, 10));
+    if (c?.custom) addCustomCity(c);
+    maybeEstimate(origin, c);
+  }
+
+  function updatePart(part: 'date' | 'time', value: string) {
+    const [d = '', t = ''] = depStr.split('T');
+    const nd = part === 'date' ? value : d;
+    const nt = part === 'time' ? value : t || '00:00';
+    if (!nd) return;
+    setDepStr(`${nd}T${nt}`);
+  }
+
+  function setDuration(hours: number, minutes: number) {
+    setDurationTouched(true);
+    setDurationMin(Math.max(0, Math.min(30 * 60, hours * 60 + minutes)));
   }
 
   const tzInfo = useMemo(() => {
@@ -91,16 +195,18 @@ export function Planner() {
     return { raw, label: `${formatDuration(abs)} ${dir} your home time`, note };
   }, [origin, dest, depStr]);
 
-  const parsed = useMemo(() => {
-    const departure = origin && depStr ? parseLocalInput(depStr, origin.tz) : null;
-    const arrival = dest && arrStr ? parseLocalInput(arrStr, dest.tz) : null;
-    const orderOk = Boolean(departure && arrival && arrival.getTime() > departure.getTime());
-    return { departure, arrival, orderOk };
-  }, [origin, dest, depStr, arrStr]);
+  const arrival = useMemo(() => {
+    if (!origin || !dest || !depStr || durationMin <= 0) return null;
+    const dep = parseLocalInput(depStr, origin.tz);
+    if (!dep) return null;
+    return new Date(dep.getTime() + durationMin * 60000);
+  }, [origin, dest, depStr, durationMin]);
+
+  const arrivalDateStr = arrival && dest ? toLocalInput(arrival, dest.tz).slice(0, 10) : '';
 
   const canNext =
-    (step === 1 && origin && dest && origin.id !== dest.id) ||
-    (step === 2 && depStr && arrStr && tzInfo && parsed.orderOk) ||
+    (step === 1 && origin && dest && origin.id !== dest.id && depStr && durationMin > 0 && arrival) ||
+    step === 2 ||
     step === 3 ||
     step === 4 ||
     step === 5;
@@ -117,19 +223,19 @@ export function Planner() {
   function build() {
     if (!origin || !dest) return;
     const departure = parseLocalInput(depStr, origin.tz);
-    const arrival = parseLocalInput(arrStr, dest.tz);
-    if (!departure || !arrival || arrival.getTime() <= departure.getTime()) return;
+    const arrivalInstant = arrival;
+    if (!departure || !arrivalInstant || arrivalInstant.getTime() <= departure.getTime()) return;
     setBuilding(true);
     const [bh, bm] = bedtime.split(':').map(Number);
     const [wh, wm] = wake.split(':').map(Number);
 
-    const total = arrival.getTime() - departure.getTime();
+    const total = arrivalInstant.getTime() - departure.getTime();
     const active = connections.filter((c) => c.city && c.city.id);
     const layovers: Trip['layovers'] = active.map((c, i) => {
       const cCity = c.city as City;
       const frac = (i + 1) / (active.length + 1);
       const start = new Date(departure.getTime() + total * frac);
-      const end = new Date(Math.min(start.getTime() + c.hours * 3600000, arrival.getTime() - 45 * 60000));
+      const end = new Date(Math.min(start.getTime() + c.hours * 3600000, arrivalInstant.getTime() - 45 * 60000));
       return {
         city: cCity.city,
         code: cCity.code,
@@ -142,7 +248,7 @@ export function Planner() {
     const label = [origin.city, ...active.map((c) => (c.city as City).city), dest.city].join(' → ');
 
     const trip: Trip = {
-      id: uid(),
+      id: editing?.id ?? uid(),
       originId: origin.id,
       destId: dest.id,
       originCity: origin.city,
@@ -154,7 +260,7 @@ export function Planner() {
       destCountry: dest.country,
       destTz: dest.tz,
       departureISO: departure.toISOString(),
-      arrivalISO: arrival.toISOString(),
+      arrivalISO: arrivalInstant.toISOString(),
       bedtime: bh * 60 + (bm || 0),
       wake: wh * 60 + (wm || 0),
       caffeine,
@@ -163,12 +269,35 @@ export function Planner() {
       crewMode,
       meetingAtISO: meetingStr ? parseLocalInput(meetingStr, dest.tz)?.toISOString() ?? null : null,
       layovers,
-      createdAt: Date.now(),
+      createdAt: editing?.createdAt ?? Date.now(),
+      isDemo: false,
       label,
     };
 
+    if (editing) {
+      updateTrip(trip);
+      push({ title: 'Flight updated', body: 'Your recovery plan has been recalculated.', icon: 'plane' });
+      navigate('itinerary');
+      return;
+    }
+
     window.setTimeout(() => {
       addTrip(trip);
+      clearDraft();
+      for (const c of commitments) {
+        if (!c.title.trim() || !c.date) continue;
+        const on = parseLocalInput(`${c.date}T00:00`, dest.tz);
+        if (!on) continue;
+        addScheduleItem({
+          id: uid(),
+          tripId: trip.id,
+          day: Math.max(1, dayDiff(arrivalInstant, on, dest.tz) + 1),
+          title: c.title.trim(),
+          startMin: toMin(c.start),
+          endMin: toMin(c.end),
+          type: c.type,
+        });
+      }
       push({ title: 'Trip saved', body: 'Here are the time zones of your journey.', icon: 'globe' });
       navigate('journey');
     }, 1250);
@@ -201,12 +330,159 @@ export function Planner() {
 
       {step === 1 && (
         <div className="step" key="s1">
-          <h2>Where are you flying?</h2>
-          <p className="hint">Two cities is all we need to start. We handle the time zones.</p>
+          <h2>Add a flight</h2>
+          <p className="hint">
+            Pick both cities anywhere in the world, then set the departure and the flight time. We handle the time
+            zones.
+          </p>
           <div className="field-grid">
-            <CitySearch label="From" value={origin?.id ?? null} onPick={pickOrigin} autoFocus placeholder="e.g. Delhi" />
-            <CitySearch label="To" value={dest?.id ?? null} onPick={pickDest} placeholder="e.g. London" />
+            <CitySearch
+              label="From"
+              value={origin}
+              onPick={pickOrigin}
+              cities={customCities}
+              autoFocus
+              placeholder="e.g. Delhi"
+            />
+            <CitySearch
+              label="To"
+              value={dest}
+              onPick={pickDest}
+              cities={customCities}
+              placeholder="Any city or airport worldwide"
+            />
           </div>
+
+          <div style={{ marginTop: 24 }}>
+              <div className="datetime-grid">
+                <div className="field">
+                  <label htmlFor="dep-date">Departure date{origin ? ` · ${origin.city}` : ''}</label>
+                  <input
+                    id="dep-date"
+                    type="date"
+                    className="input mono"
+                    value={depStr.slice(0, 10)}
+                    onChange={(e) => updatePart('date', e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="dep-time">Departure time</label>
+                  <input
+                    id="dep-time"
+                    type="time"
+                    className="input mono"
+                    value={depStr.slice(11, 16)}
+                    onChange={(e) => updatePart('time', e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="dur-h">Flight time · hours</label>
+                  <input
+                    id="dur-h"
+                    type="number"
+                    min={0}
+                    max={30}
+                    className="input mono"
+                    value={durH}
+                    onChange={(e) => setDuration(Number(e.target.value) || 0, durM)}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="dur-m">Minutes</label>
+                  <select
+                    id="dur-m"
+                    className="input mono"
+                    value={durM}
+                    onChange={(e) => setDuration(durH, Number(e.target.value))}
+                  >
+                    {MINUTE_OPTIONS.map((m) => (
+                      <option key={m} value={m}>
+                        {String(m).padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {arrival && dest && (
+                <div className="tz-callout">
+                  <Icon name="plane" size={20} />
+                  <div>
+                    You land in {dest.city} on <strong className="mono">{formatDateTime(arrival, dest.tz)}</strong>{' '}
+                    local time · {formatDuration(durationMin)} in the air.
+                    {!durationTouched && (
+                      <span className="tiny muted"> Estimated from the distance — adjust above.</span>
+                    )}
+                  </div>
+                </div>
+              )}
+              {tzInfo && (
+                <div className="tz-callout">
+                  <Icon name="globe" size={20} />
+                  <div>
+                    <strong className="mono">{tzInfo.label}.</strong> {tzInfo.note}
+                  </div>
+                </div>
+              )}
+
+              {origin && dest && (
+                <div style={{ marginTop: 22 }}>
+                <div className="between row" style={{ marginBottom: 10 }}>
+                  <span className="eyebrow">Connections (optional)</span>
+                  <button
+                    className="btn-quiet"
+                    onClick={() => setConnections((c) => [...c, { city: null, hours: 5 }])}
+                    type="button"
+                  >
+                    <Icon name="plus" size={15} /> Add layover
+                  </button>
+                </div>
+                {connections.map((conn, i) => (
+                  <div className="connection-row" key={i}>
+                    <CitySearch
+                      label={`Connection ${i + 1}`}
+                      value={conn.city}
+                      cities={customCities}
+                      onPick={(c) => {
+                        if (c?.custom) addCustomCity(c);
+                        setConnections((list) => list.map((x, j) => (j === i ? { ...x, city: c } : x)));
+                      }}
+                      placeholder="Any city or airport worldwide"
+                    />
+                    <div className="field conn-hours">
+                      <label htmlFor={`lay-${i}`}>Hours</label>
+                      <input
+                        id={`lay-${i}`}
+                        type="number"
+                        min={1}
+                        max={24}
+                        className="input mono"
+                        value={conn.hours}
+                        onChange={(e) =>
+                          setConnections((list) =>
+                            list.map((x, j) =>
+                              j === i ? { ...x, hours: Math.max(1, Math.min(24, Number(e.target.value) || 1)) } : x,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                    {connections.length > 1 && (
+                      <button
+                        className="btn-quiet conn-remove"
+                        onClick={() => setConnections((list) => list.filter((_, j) => j !== i))}
+                        aria-label={`Remove connection ${i + 1}`}
+                        type="button"
+                      >
+                        <Icon name="trash" size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                </div>
+              )}
+            </div>
+
           <div className="example-strip">
             <span className="eyebrow" style={{ alignSelf: 'center', marginRight: 4 }}>
               Try one
@@ -220,105 +496,8 @@ export function Planner() {
         </div>
       )}
 
-      {step === 2 && origin && dest && (
+      {step === 2 && (
         <div className="step" key="s2">
-          <h2>When does your flight leave and land?</h2>
-          <p className="hint">
-            Enter times in each city's own local time. We handle the conversion.
-          </p>
-          <div className="field-grid">
-            <div className="field">
-              <label htmlFor="dep">Departure · {origin.city}</label>
-              <input
-                id="dep"
-                type="datetime-local"
-                className="input mono"
-                value={depStr}
-                onChange={(e) => {
-                  setDepStr(e.target.value);
-                  if (dest) setArrStr(addHoursToInput(e.target.value, dest.tz, 10));
-                }}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="arr">Arrival · {dest.city}</label>
-              <input
-                id="arr"
-                type="datetime-local"
-                className="input mono"
-                value={arrStr}
-                onChange={(e) => setArrStr(e.target.value)}
-              />
-            </div>
-          </div>
-          {tzInfo && parsed.orderOk && (
-            <div className="tz-callout">
-              <Icon name="globe" size={20} />
-              <div>
-                <strong className="mono">{tzInfo.label}.</strong> {tzInfo.note}
-              </div>
-            </div>
-          )}
-          {parsed.departure && parsed.arrival && !parsed.orderOk && (
-            <div className="tz-callout error" role="alert">
-              <Icon name="info" size={20} />
-              <div>Arrival must be after departure. Please check your dates and times.</div>
-            </div>
-          )}
-
-          <div style={{ marginTop: 22 }}>
-            <div className="between row" style={{ marginBottom: 10 }}>
-              <span className="eyebrow">Connections (optional)</span>
-              <button
-                className="btn-quiet"
-                onClick={() => setConnections((c) => [...c, { city: null, hours: 5 }])}
-                type="button"
-              >
-                <Icon name="plus" size={15} /> Add layover
-              </button>
-            </div>
-            {connections.map((conn, i) => (
-              <div className="connection-row" key={i}>
-                <CitySearch
-                  label={`Connection ${i + 1}`}
-                  value={conn.city?.id ?? null}
-                  onPick={(c) => setConnections((list) => list.map((x, j) => (j === i ? { ...x, city: c.id ? c : null } : x)))}
-                  placeholder="e.g. Dubai"
-                />
-                <div className="field conn-hours">
-                  <label htmlFor={`lay-${i}`}>Hours</label>
-                  <input
-                    id={`lay-${i}`}
-                    type="number"
-                    min={1}
-                    max={24}
-                    className="input mono"
-                    value={conn.hours}
-                    onChange={(e) =>
-                      setConnections((list) =>
-                        list.map((x, j) => (j === i ? { ...x, hours: Math.max(1, Math.min(24, Number(e.target.value) || 1)) } : x)),
-                      )
-                    }
-                  />
-                </div>
-                {connections.length > 1 && (
-                  <button
-                    className="btn-quiet conn-remove"
-                    onClick={() => setConnections((list) => list.filter((_, j) => j !== i))}
-                    aria-label={`Remove connection ${i + 1}`}
-                    type="button"
-                  >
-                    <Icon name="trash" size={16} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div className="step" key="s3">
           <h2>How's your usual rhythm?</h2>
           <p className="hint">Rough is fine. We only need the shape of your normal day.</p>
           <div className="field-grid">
@@ -357,8 +536,8 @@ export function Planner() {
         </div>
       )}
 
-      {step === 4 && (
-        <div className="step" key="s4">
+      {step === 3 && (
+        <div className="step" key="s3">
           <h2>How much do you want to adjust before you fly?</h2>
           <p className="hint">More prep means smaller, earlier changes. Less prep keeps things simple.</p>
           <div className="option-list">
@@ -381,8 +560,8 @@ export function Planner() {
         </div>
       )}
 
-      {step === 5 && (
-        <div className="step" key="s5">
+      {step === 4 && (
+        <div className="step" key="s4">
           <h2>How long are you staying?</h2>
           <p className="hint">Short trips stay on home time. Easier than shifting twice.</p>
           <div className="option-list">
@@ -409,7 +588,7 @@ export function Planner() {
             onClick={() => setShowOptional((v) => !v)}
             aria-expanded={showOptional}
           >
-            <Icon name="chevron" size={16} /> Optional: crew mode, a meeting, or a connection
+            <Icon name="chevron" size={16} /> Optional: crew mode or a key meeting
           </button>
 
           {showOptional && (
@@ -447,13 +626,127 @@ export function Planner() {
         </div>
       )}
 
+      {step === 5 && (
+        <div className="step" key="s5">
+          <h2>Anything you need to be awake for?</h2>
+          <p className="hint">
+            Optional. Add meetings, classes or events in {dest ? `${dest.city} local time` : 'destination time'}. We
+            will flag the ones that clash with your body clock and plan around them.
+          </p>
+
+          {commitments.length === 0 && (
+            <p className="small muted" style={{ marginBottom: 14 }}>
+              Nothing added yet. You can skip this and add it later.
+            </p>
+          )}
+
+          <div className="stack" style={{ gap: 12 }}>
+            {commitments.map((c, i) => (
+              <div className="commitment-row card" key={c.id}>
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor={`c-title-${i}`}>Title</label>
+                  <input
+                    id={`c-title-${i}`}
+                    className="input"
+                    value={c.title}
+                    placeholder="e.g. Client kickoff"
+                    onChange={(e) =>
+                      setCommitments((list) => list.map((x) => (x.id === c.id ? { ...x, title: e.target.value } : x)))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`c-date-${i}`}>Date</label>
+                  <input
+                    id={`c-date-${i}`}
+                    type="date"
+                    className="input mono"
+                    value={c.date}
+                    onChange={(e) =>
+                      setCommitments((list) => list.map((x) => (x.id === c.id ? { ...x, date: e.target.value } : x)))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`c-start-${i}`}>Start</label>
+                  <input
+                    id={`c-start-${i}`}
+                    type="time"
+                    className="input mono"
+                    value={c.start}
+                    onChange={(e) =>
+                      setCommitments((list) => list.map((x) => (x.id === c.id ? { ...x, start: e.target.value } : x)))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`c-end-${i}`}>End</label>
+                  <input
+                    id={`c-end-${i}`}
+                    type="time"
+                    className="input mono"
+                    value={c.end}
+                    onChange={(e) =>
+                      setCommitments((list) => list.map((x) => (x.id === c.id ? { ...x, end: e.target.value } : x)))
+                    }
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`c-type-${i}`}>Type</label>
+                  <select
+                    id={`c-type-${i}`}
+                    className="input"
+                    value={c.type}
+                    onChange={(e) =>
+                      setCommitments((list) =>
+                        list.map((x) => (x.id === c.id ? { ...x, type: e.target.value as ScheduleType } : x)),
+                      )
+                    }
+                  >
+                    <option value="meeting">Meeting</option>
+                    <option value="class">Class</option>
+                    <option value="event">Event</option>
+                    <option value="free">Free</option>
+                  </select>
+                </div>
+                <button
+                  className="btn-quiet commitment-remove"
+                  onClick={() => setCommitments((list) => list.filter((x) => x.id !== c.id))}
+                  aria-label={`Remove ${c.title || 'item'}`}
+                  type="button"
+                >
+                  <Icon name="trash" size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button
+            className="btn btn-ghost"
+            style={{ marginTop: 14 }}
+            onClick={() =>
+              setCommitments((list) => [
+                ...list,
+                { id: uid(), title: '', date: arrivalDateStr, start: '09:00', end: '10:00', type: 'meeting' },
+              ])
+            }
+            type="button"
+          >
+            <Icon name="plus" size={16} /> Add an item
+          </button>
+        </div>
+      )}
+
       <div className="planner-foot">
         {step > 1 ? (
           <button className="btn btn-ghost" onClick={() => setStep((s) => s - 1)}>
             Back
           </button>
         ) : (
-          <button className="btn-quiet" onClick={() => navigate(trips.length ? 'itinerary' : 'landing')}>
+          <button
+            className="btn-quiet"
+            onClick={() => navigate(editing || trips.length ? 'itinerary' : 'landing')}
+          >
             Cancel
           </button>
         )}
@@ -463,7 +756,7 @@ export function Planner() {
           </button>
         ) : (
           <button className="btn btn-accent" onClick={build}>
-            Build my plan <Icon name="spark" size={17} />
+            {editing ? 'Save changes' : 'Build my plan'} <Icon name={editing ? 'check' : 'spark'} size={17} />
           </button>
         )}
       </div>

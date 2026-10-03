@@ -1,21 +1,21 @@
 :root {
   /* Paper & ink */
-  --paper: #faf8f4;
-  --paper-2: #f4f1ea;
-  --paper-3: #efeae0;
-  --card: #fffdf9;
-  --ink: #211f1c;
-  --ink-soft: #4a453e;
-  --muted: #8a8378;
-  --muted-2: #a9a196;
-  --hairline: #e6e0d5;
-  --hairline-strong: #d8d1c4;
+  --paper: #ffffff;
+  --paper-2: #f2f9fd;
+  --paper-3: #e7f3fb;
+  --card: #ffffff;
+  --ink: #172a34;
+  --ink-soft: #465b66;
+  --muted: #7e929d;
+  --muted-2: #a7b8c1;
+  --hairline: #dcebf4;
+  --hairline-strong: #c3dbe9;
 
   /* Accents */
-  --accent: #0b63f6; /* electric blue */
-  --accent-ink: #0747b8;
-  --accent-wash: #e6efff;
-  --accent-glow: rgba(11, 99, 246, 0.28);
+  --accent: #8ecae6; /* baby blue */
+  --accent-ink: #2b6f96;
+  --accent-wash: #e8f5fc;
+  --accent-glow: rgba(142, 202, 230, 0.45);
   --sand: #c99a52; /* light moments */
   --sand-ink: #9a7133;
   --sand-wash: #f5ecda;
@@ -29,7 +29,7 @@
   /* Type */
   --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
   --sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --mono: var(--sans);
 
   /* Space & shape */
   --r-sm: 10px;
@@ -70,7 +70,7 @@ body::before {
   pointer-events: none;
   z-index: 0;
   opacity: 0.5;
-  background-image: radial-gradient(rgba(60, 50, 35, 0.035) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(43, 111, 150, 0.05) 1px, transparent 1px);
   background-size: 4px 4px;
 }
 
@@ -126,7 +126,7 @@ ul {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .muted {
   color: var(--muted);
@@ -183,19 +183,21 @@ ul {
 }
 .btn-primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   box-shadow: 0 8px 22px -12px var(--accent-glow);
 }
 .btn-primary:hover {
   background: var(--accent-ink);
+  color: #fff;
   box-shadow: 0 10px 26px -12px var(--accent-glow);
 }
 .btn-accent {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 .btn-accent:hover {
   background: var(--accent-ink);
+  color: #fff;
   box-shadow: var(--shadow-1);
 }
 .btn-ghost {

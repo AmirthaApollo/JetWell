@@ -4,25 +4,25 @@ import type { ReactNode } from 'react';
 export type Route =
   | 'landing'
   | 'plan'
+  | 'edit'
   | 'journey'
   | 'schedule'
+  | 'calendar'
   | 'itinerary'
-  | 'now'
   | 'reset'
   | 'checkin'
-  | 'trips'
   | 'profile';
 
 const VALID: Route[] = [
   'landing',
   'plan',
+  'edit',
   'journey',
   'schedule',
+  'calendar',
   'itinerary',
-  'now',
   'reset',
   'checkin',
-  'trips',
   'profile',
 ];
 
@@ -39,7 +39,8 @@ function parse(): Route | null {
 }
 
 export function RouterProvider({ children, initial }: { children: ReactNode; initial: Route }) {
-  const [route, setRoute] = useState<Route>(() => parse() ?? initial);
+  // Always open on the initial route (home) so a hard refresh starts fresh.
+  const [route, setRoute] = useState<Route>(initial);
 
   useEffect(() => {
     const on = () => {

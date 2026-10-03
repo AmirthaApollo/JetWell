@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useStore } from '../store/store';
 import { CitySearch } from '../components/CitySearch';
 import { Icon } from '../components/Icon';
+import { SectionHead } from '../components/SectionHead';
 import { useToast } from '../components/Toast';
+import { findCity } from '../data/cities';
 import type { CaffeineHabit } from '../engine/planEngine';
 
 const CAFFEINE_OPTIONS: [CaffeineHabit, string][] = [
@@ -13,7 +15,8 @@ const CAFFEINE_OPTIONS: [CaffeineHabit, string][] = [
 ];
 
 export function Profile() {
-  const { prefs, updatePrefs, resetDemo, clearAll, clearTrip, activeTrip, trips, checkins, recovery } = useStore();
+  const { prefs, updatePrefs, resetDemo, clearAll, clearTrip, activeTrip, trips, checkins, recovery, customCities, addCustomCity } =
+    useStore();
   const { push } = useToast();
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -23,19 +26,18 @@ export function Profile() {
 
   return (
     <div className="screen" style={{ maxWidth: 720 }}>
-      <div className="section-head">
-        <div>
-          <div className="eyebrow">You</div>
-          <h2 style={{ fontSize: 30, marginTop: 4 }}>Profile</h2>
-        </div>
-      </div>
+      <SectionHead icon="note" eyebrow="You" title="Profile" />
 
       <div className="card pad" style={{ marginBottom: 24 }}>
         <div className="field" style={{ marginBottom: 24, maxWidth: 320 }}>
           <CitySearch
             label="Home city"
-            value={prefs.homeCityId}
-            onPick={(c) => c.id && updatePrefs({ homeCityId: c.id })}
+            value={findCity(prefs.homeCityId, customCities) ?? null}
+            cities={customCities}
+            onPick={(c) => {
+              if (c?.custom) addCustomCity(c);
+              updatePrefs({ homeCityId: c?.id ?? '' });
+            }}
             placeholder="Search your home city"
           />
         </div>

@@ -1,7 +1,7 @@
 import { CITIES, findCity } from '../data/cities';
 import { addDaysToParts, getZonedParts, zonedToInstant } from '../lib/time';
 import type { Trip } from './types';
-import type { TripInput } from '../engine/planEngine';
+import type { TripInput, ScheduleItem } from '../engine/planEngine';
 
 function futureLocal(dayOffset: number, hour: number, minute: number, tz: string): Date {
   const now = getZonedParts(new Date(), tz);
@@ -140,7 +140,7 @@ export function seedTrips(): Trip[] {
   return [demo, ...others, pastTrip()];
 }
 
-export function tripToInput(trip: Trip): TripInput {
+export function tripToInput(trip: Trip, schedule: ScheduleItem[] = []): TripInput {
   const lows = trip.layovers ?? (trip.layover ? [trip.layover] : []);
   return {
     originTz: trip.originTz,
@@ -161,5 +161,6 @@ export function tripToInput(trip: Trip): TripInput {
       start: new Date(l.startISO),
       end: new Date(l.endISO),
     })),
+    schedule,
   };
 }

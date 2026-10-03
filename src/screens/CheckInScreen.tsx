@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { useRouter } from '../router';
 import { useStore } from '../store/store';
 import { Icon } from '../components/Icon';
+import { SectionHead } from '../components/SectionHead';
 import { useNow } from '../components/hooks';
 import { buildPlan } from '../engine/planEngine';
 import { tripToInput } from '../store/seed';
-import { dayDiff, formatTime } from '../lib/time';
+import { formatTime } from '../lib/time';
 
 interface ScaleDef {
   key: 'energy' | 'sleepiness' | 'mood' | 'sleepQuality';
@@ -58,7 +59,7 @@ function Scale({
 
 export function CheckInScreen() {
   const { navigate } = useRouter();
-  const { activeTrip, addCheckIn, addRecovery, recovery, prefs } = useStore();
+  const { activeTrip, addCheckIn, addRecovery, prefs } = useStore();
   const now = useNow(60000);
 
   const [energy, setEnergy] = useState(3);
@@ -86,8 +87,6 @@ export function CheckInScreen() {
   const landed = now >= plan.arrival;
   const severe = sleepQuality <= 1 || mood <= 1;
 
-  const tripRecovery = recovery.filter((r) => r.tripId === activeTrip.id).sort((a, b) => a.at - b.at);
-
   function submit() {
     addCheckIn({ tripId: activeTrip!.id, at: Date.now(), energy, sleepiness, mood, sleepQuality });
     setSubmitted(true);
@@ -108,12 +107,7 @@ export function CheckInScreen() {
 
   return (
     <div className="screen" style={{ maxWidth: 680 }}>
-      <div className="section-head">
-        <div>
-          <div className="eyebrow">Optional · under 20 seconds</div>
-          <h2 style={{ fontSize: 30, marginTop: 4 }}>How I'm feeling</h2>
-        </div>
-      </div>
+      <SectionHead icon="info" eyebrow="Optional · under 20 seconds" title="How I'm feeling" />
       <p className="muted" style={{ marginBottom: 26, maxWidth: '52ch' }}>
         A quick check so we can adjust the rest of your plan. There are no wrong answers here.
       </p>
@@ -154,47 +148,32 @@ export function CheckInScreen() {
         </>
       )}
 
-      <div className="card recovery-chart" style={{ marginTop: 30 }}>
-        <div className="between row" style={{ marginBottom: 8 }}>
-          <div>
-            <div className="eyebrow">Recovery curve</div>
-            <div className="small muted">How settled you feel, by day since landing.</div>
+      {landed && (
+        <div className="card pad" style={{ marginTop: 30, maxWidth: 440 }}>
+          <label htmlFor="settled-scale" style={{ display: 'block', fontWeight: 600, marginBottom: 10 }}>
+            How settled do you feel today? (1-5)
+          </label>
+          <div className="scale" id="settled-scale">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                className={`scale-btn ${settled === n ? 'on' : ''}`}
+                onClick={() => {
+                  setSettled(n);
+                  addRecovery({ tripId: activeTrip.id, at: Date.now(), score: n });
+                }}
+                aria-label={`${n} of 5`}
+              >
+                <span className="face" />
+                <span className="mono">{n}</span>
+              </button>
+            ))}
           </div>
+          <p className="tiny muted" style={{ marginTop: 8 }}>
+            A soft guide to your own adjustment, not a medical measurement.
+          </p>
         </div>
-        <RecoveryCurve
-          points={tripRecovery.map((r) => ({
-            day: landed ? dayDiff(new Date(plan.arrival), new Date(r.at), activeTrip.destTz) : 0,
-            value: r.score,
-            at: r.at,
-          }))}
-        />
-        {landed && (
-          <div style={{ marginTop: 18 }}>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 10 }}>
-              How settled do you feel today? (1-5)
-            </label>
-            <div className="scale">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  className={`scale-btn ${settled === n ? 'on' : ''}`}
-                  onClick={() => {
-                    setSettled(n);
-                    addRecovery({ tripId: activeTrip.id, at: Date.now(), score: n });
-                  }}
-                  aria-label={`${n} of 5`}
-                >
-                  <span className="face" />
-                  <span className="mono">{n}</span>
-                </button>
-              ))}
-            </div>
-            <p className="tiny muted" style={{ marginTop: 8 }}>
-              A soft guide to your own adjustment, not a medical measurement.
-            </p>
-          </div>
-        )}
-      </div>
+      )}
 
       <p className="footer-note" style={{ marginTop: 30 }}>
         People with sleep disorders, who are pregnant, or with health conditions that affect sleep should check with a
@@ -202,49 +181,5 @@ export function CheckInScreen() {
         {formatTime(new Date(now), activeTrip.destTz, prefs.hour12)} {activeTrip.destCity}.
       </p>
     </div>
-  );
-}
-
-function RecoveryCurve({ points }: { points: { day: number; value: number; at: number }[] }) {
-  const W = 620;
-  const H = 190;
-  const pad = { l: 34, r: 14, t: 18, b: 30 };
-  const maxDay = Math.max(3, ...points.map((p) => p.day));
-  const xFor = (d: number) => pad.l + (d / maxDay) * (W - pad.l - pad.r);
-  const yFor = (v: number) => pad.t + (1 - (v - 1) / 4) * (H - pad.t - pad.b);
-
-  const sorted = [...points].sort((a, b) => a.day - b.day);
-  const line = sorted.map((p) => `${xFor(p.day)},${yFor(p.value)}`).join(' ');
-  const area =
-    sorted.length > 1
-      ? `${xFor(sorted[0].day)},${H - pad.b} ` + line + ` ${xFor(sorted[sorted.length - 1].day)},${H - pad.b}`
-      : '';
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Recovery curve: settled feeling by day since landing">
-      {[1, 3, 5].map((v) => (
-        <g key={v}>
-          <line x1={pad.l} y1={yFor(v)} x2={W - pad.r} y2={yFor(v)} stroke="var(--hairline)" strokeWidth="1" />
-          <text x="12" y={yFor(v) + 4} className="rc-label">
-            {v}
-          </text>
-        </g>
-      ))}
-      {Array.from({ length: maxDay + 1 }).map((_, d) => (
-        <text key={d} x={xFor(d)} y={H - 8} textAnchor="middle" className="rc-label">
-          D{d}
-        </text>
-      ))}
-      {area && <polygon points={area} fill="var(--accent-wash)" opacity="0.7" />}
-      {sorted.length > 1 && <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" />}
-      {sorted.map((p) => (
-        <circle key={p.at} cx={xFor(p.day)} cy={yFor(p.value)} r="4.5" fill="var(--accent)" stroke="var(--card)" strokeWidth="2" />
-      ))}
-      {sorted.length === 0 && (
-        <text x={W / 2} y={H / 2} textAnchor="middle" className="rc-label">
-          No recovery scores yet. Add one after you land.
-        </text>
-      )}
-    </svg>
   );
 }

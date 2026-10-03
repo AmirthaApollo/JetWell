@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { AppState, CheckIn, Prefs, RecoveryScore, ScheduleItem, Trip } from './types';
+import type { AppState, CheckIn, PlannerDraft, Prefs, RecoveryScore, ScheduleItem, Trip } from './types';
 import { seedTrips, uid } from './seed';
+import type { City } from '../data/cities';
 
 const KEY = 'jetwell:v1';
 
@@ -39,6 +40,8 @@ function freshState(): AppState {
     checkins: [],
     recovery: defaultRecovery(trips),
     dismissedTips: {},
+    customCities: [],
+    draft: null,
     seededAt: Date.now(),
   };
 }
@@ -49,7 +52,13 @@ function load(): AppState {
     if (!raw) return freshState();
     const parsed = JSON.parse(raw) as AppState;
     if (!parsed.trips || !Array.isArray(parsed.trips) || parsed.trips.length === 0) return freshState();
-    return { ...freshState(), ...parsed, prefs: { ...defaultPrefs, ...parsed.prefs } };
+    return {
+      ...freshState(),
+      ...parsed,
+      prefs: { ...defaultPrefs, ...parsed.prefs },
+      customCities: Array.isArray(parsed.customCities) ? parsed.customCities : [],
+      draft: parsed.draft ?? null,
+    };
   } catch {
     return freshState();
   }
@@ -76,6 +85,9 @@ interface StoreValue extends AppState {
   addRecovery: (r: Omit<RecoveryScore, 'id'>) => void;
   dismissTip: (id: string) => void;
   clearTrip: (id: string) => void;
+  addCustomCity: (city: City) => void;
+  setDraft: (draft: PlannerDraft) => void;
+  clearDraft: () => void;
   resetDemo: () => void;
   clearAll: () => void;
 }
@@ -258,6 +270,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, dismissedTips: { ...s.dismissedTips, [id]: true } }));
   }, []);
 
+  const addCustomCity = useCallback((city: City) => {
+    setState((s) => {
+      if (!city.id || s.customCities.some((c) => c.id === city.id)) return s;
+      return { ...s, customCities: [city, ...s.customCities] };
+    });
+  }, []);
+
+  const setDraft = useCallback((draft: PlannerDraft) => {
+    setState((s) => ({ ...s, draft }));
+  }, []);
+
+  const clearDraft = useCallback(() => {
+    setState((s) => (s.draft === null ? s : { ...s, draft: null }));
+  }, []);
+
   const resetDemo = useCallback(() => {
     setState(freshState());
   }, []);
@@ -304,6 +331,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     addRecovery,
     dismissTip,
     clearTrip,
+    addCustomCity,
+    setDraft,
+    clearDraft,
     resetDemo,
     clearAll,
   };

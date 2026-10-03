@@ -165,6 +165,24 @@ describe('plan engine: layover and meeting', () => {
     const item = p.items.find((i) => i.id === 'after-meeting');
     expect(item).toBeTruthy();
   });
+
+  it('weaves added commitments into the after-landing timeline', () => {
+    const dep = parseLocalInput('2026-01-15T02:00', DEL)!;
+    const arr = parseLocalInput('2026-01-15T07:00', LHR)!;
+    const p = buildPlan(
+      makeInput({
+        originTz: DEL,
+        destTz: LHR,
+        departure: dep,
+        arrival: arr,
+        schedule: [{ id: 'c1', tripId: 't', day: 1, title: 'Client kickoff', startMin: 9 * 60, endMin: 10 * 60, type: 'meeting' }],
+      }),
+    );
+    const item = p.items.find((i) => i.id === 'commit-c1');
+    expect(item).toBeTruthy();
+    expect(item!.phase).toBe('after');
+    expect(item!.title).toBe('Client kickoff');
+  });
 });
 
 describe('current/next item helpers', () => {

@@ -5,31 +5,31 @@ import { useNow, useReducedMotion } from '../components/hooks';
 import { useToast } from '../components/Toast';
 import { BoardingPass } from '../components/BoardingPass';
 import { WorldClocks, type ClockZone } from '../components/WorldClocks';
-import { DayArc } from '../components/DayArc';
 import { ItemCard } from '../components/ItemCard';
 import { Icon } from '../components/Icon';
 import { Modal } from '../components/Modal';
-import { buildPlan, EATING_TIPS, mealTips, currentItem, nextItem, type Phase } from '../engine/planEngine';
+import { buildPlan, EATING_TIPS, mealTips, currentItem, type Phase } from '../engine/planEngine';
 import { tripToInput } from '../store/seed';
 import { formatDuration } from '../lib/time';
 import { planToText, planToIcs, downloadFile, tripTitle } from '../lib/export';
 import { PACKING_LIST } from '../lib/packing';
 import type { PlanItem } from '../engine/planEngine';
 
-const PHASE_META: Record<Phase, { title: string; sub: (p: ReturnType<typeof buildPlan>) => string }> = {
+const PHASE_META: Record<Phase, { title: string; icon: 'bed' | 'plane' | 'light'; sub: (p: ReturnType<typeof buildPlan>) => string }> = {
   before: {
     title: 'Before you fly',
+    icon: 'bed',
     sub: (p) => (p.prepDays > 0 ? `${p.prepDays} day${p.prepDays > 1 ? 's' : ''} out` : 'Travel day'),
   },
-  air: { title: 'In the air', sub: (p) => formatDuration(p.flightMinutes) + ' flight' },
-  after: { title: 'After you land', sub: () => 'First three days' },
+  air: { title: 'In the air', icon: 'plane', sub: (p) => formatDuration(p.flightMinutes) + ' flight' },
+  after: { title: 'After you land', icon: 'light', sub: () => 'First three days' },
 };
 
 const PAGE_SIZE = 5;
 
 export function Itinerary() {
   const { navigate } = useRouter();
-  const { activeTrip, prefs, isDone, toggleItem, togglePacking, isPacked, returnTrip, trips } = useStore();
+  const { activeTrip, prefs, isDone, toggleItem, togglePacking, isPacked, returnTrip, trips, schedule } = useStore();
   const { push } = useToast();
   const now = useNow(30000);
   const reduced = useReducedMotion();
@@ -39,10 +39,16 @@ export function Itinerary() {
   const refs = useRef<Record<string, HTMLElement | null>>({});
   const scrolled = useRef(false);
 
-  const plan = useMemo(() => (activeTrip ? buildPlan(tripToInput(activeTrip)) : null), [activeTrip]);
+  const tripSchedule = useMemo(
+    () => (activeTrip ? schedule.filter((s) => s.tripId === activeTrip.id) : []),
+    [schedule, activeTrip],
+  );
+  const plan = useMemo(
+    () => (activeTrip ? buildPlan(tripToInput(activeTrip, tripSchedule)) : null),
+    [activeTrip, tripSchedule],
+  );
 
   const current = plan ? currentItem(plan.items, now) : { current: null, index: -1 };
-  const upcoming = plan ? nextItem(plan.items, now) : null;
 
   useEffect(() => {
     if (!plan || scrolled.current) return;
@@ -113,6 +119,9 @@ export function Itinerary() {
           <h2 style={{ fontSize: 30, marginTop: 4 }}>Your recovery plan</h2>
         </div>
         <div className="bpass-actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('edit')} aria-label="Edit flight">
+            <Icon name="note" size={15} /> Edit flight
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={share} aria-label="Copy plan as text">
             <Icon name="share" size={15} /> Share
           </button>
@@ -131,13 +140,6 @@ export function Itinerary() {
         </div>
       </div>
 
-      {current.current && upcoming && (
-        <button className="sticky-now" onClick={() => navigate('now')}>
-          <span className="nm-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--sand)' }} />
-          Now: {upcoming.title} · in {formatDuration((upcoming.at - now) / 60000)}
-        </button>
-      )}
-
       <BoardingPass trip={activeTrip} plan={plan} hour12={prefs.hour12} />
 
       <WorldClocks clocks={clocks} hour12={prefs.hour12} />
@@ -154,10 +156,6 @@ export function Itinerary() {
         </div>
       </div>
 
-      <div style={{ marginTop: 20 }}>
-        <DayArc plan={plan} now={now} hour12={prefs.hour12} />
-      </div>
-
       <div className="between row" style={{ marginTop: 20, flexWrap: 'wrap', gap: 12 }}>
         <button className="btn btn-ghost btn-sm" onClick={() => setPackOpen(true)}>
           <Icon name="note" size={15} /> Recovery packing list
@@ -168,7 +166,7 @@ export function Itinerary() {
             onClick={() => {
               returnTrip(activeTrip.id);
               push({ title: 'Return trip added', body: 'We planned the flight home too.', icon: 'plane' });
-              navigate('trips');
+              navigate('calendar');
             }}
           >
             <Icon name="refresh" size={15} /> Add the return flight
@@ -184,7 +182,9 @@ export function Itinerary() {
           return (
             <section className="phase" key={phase} aria-label={PHASE_META[phase].title}>
               <div className="phase-head">
-                <span className="ph-dot" />
+                <span className="ph-icon" aria-hidden="true">
+                  <Icon name={PHASE_META[phase].icon} size={16} />
+                </span>
                 <h3>{PHASE_META[phase].title}</h3>
                 <div className="phase-rule" />
                 <span className="ph-sub">{PHASE_META[phase].sub(plan)}</span>

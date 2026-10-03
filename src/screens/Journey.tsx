@@ -3,6 +3,8 @@ import { useRouter } from '../router';
 import { useStore } from '../store/store';
 import { useNow } from '../components/hooks';
 import { Icon } from '../components/Icon';
+import { SectionHead } from '../components/SectionHead';
+import { Divider } from '../components/Divider';
 import { findCity } from '../data/cities';
 import { buildPlan } from '../engine/planEngine';
 import { tripToInput } from '../store/seed';
@@ -10,7 +12,7 @@ import { formatClock, formatDuration, getOffsetMinutes, offsetLabel } from '../l
 
 export function Journey() {
   const { navigate } = useRouter();
-  const { activeTrip, prefs } = useStore();
+  const { activeTrip, prefs, customCities } = useStore();
   const now = useNow(1000);
 
   const plan = useMemo(() => (activeTrip ? buildPlan(tripToInput(activeTrip)) : null), [activeTrip]);
@@ -31,7 +33,7 @@ export function Journey() {
     );
   }
 
-  const home = findCity(prefs.homeCityId) ?? findCity(activeTrip.originId);
+  const home = findCity(prefs.homeCityId, customCities) ?? findCity(activeTrip.originId, customCities);
   const homeTz = home?.tz ?? activeTrip.originTz;
   const homeName = home?.city ?? activeTrip.originCity;
 
@@ -57,17 +59,21 @@ export function Journey() {
 
   return (
     <div className="screen">
-      <div className="section-head">
-        <div>
-          <div className="eyebrow">Time zones of my journey</div>
-          <h2 style={{ fontSize: 30, marginTop: 4 }}>
-            {activeTrip.originCity} to {activeTrip.destCity}
-          </h2>
-        </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('schedule')}>
-          <Icon name="calendar" size={15} /> My schedule
-        </button>
-      </div>
+      <SectionHead
+        icon="globe"
+        eyebrow="Time zones of my journey"
+        title={`${activeTrip.originCity} to ${activeTrip.destCity}`}
+        action={
+          <div className="row gap-8">
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('edit')}>
+              <Icon name="note" size={15} /> Edit flight
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('schedule')}>
+              <Icon name="calendar" size={15} /> My commitments
+            </button>
+          </div>
+        }
+      />
 
       <div className={`direction-note ${plan.direction}`}>
         <Icon name={plan.direction === 'eastbound' ? 'light' : plan.direction === 'westbound' ? 'sleep' : 'globe'} size={18} />
@@ -108,9 +114,11 @@ export function Journey() {
         })}
       </ol>
 
-      <div className="row gap-12" style={{ marginTop: 22, flexWrap: 'wrap' }}>
+      <Divider icon="globe" />
+
+      <div className="row gap-12" style={{ flexWrap: 'wrap' }}>
         <button className="btn btn-primary" onClick={() => navigate('schedule')}>
-          Add my schedule <Icon name="arrow" size={16} />
+          Add commitments <Icon name="arrow" size={16} />
         </button>
         <button className="btn btn-ghost" onClick={() => navigate('itinerary')}>
           View recovery plan

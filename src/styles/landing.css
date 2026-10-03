@@ -1,0 +1,509 @@
+/* ==========================================================================
+   JetWell — Home / landing
+   Concise single-screen hero. Uses the site's white + baby-blue palette.
+   ========================================================================== */
+
+.app.home {
+  background: var(--paper);
+}
+.app.home .content {
+  padding: 0 clamp(20px, 5vw, 56px) 24px;
+  display: flex;
+}
+
+.landing {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  min-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  font-family: 'DM Sans', var(--sans);
+  color: var(--ink);
+  position: relative;
+}
+
+.landing h1,
+.landing h2,
+.landing h3 {
+  font-family: 'DM Sans', var(--sans);
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  line-height: 1.06;
+  margin: 0;
+}
+
+/* ---------- Buttons ---------- */
+.jw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 21px;
+  border-radius: 999px;
+  font-family: 'DM Sans', var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease),
+    color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.jw-btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+.jw-btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 14px 26px -16px var(--accent-glow);
+}
+.jw-btn-primary:hover {
+  background: var(--accent-ink);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.jw-btn-ghost {
+  background: #fff;
+  border-color: var(--hairline-strong);
+  color: var(--ink);
+}
+.jw-btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ---------- Nav ---------- */
+.jw-nav {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 20px 0;
+  flex: none;
+}
+.jw-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.jw-brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.jw-nav-links {
+  display: flex;
+  gap: 26px;
+  margin-left: 12px;
+}
+.jw-nav-links button {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  transition: color 0.2s var(--ease);
+}
+.jw-nav-links button:hover {
+  color: var(--accent-ink);
+}
+.jw-nav-spacer {
+  margin-left: auto;
+}
+
+/* ---------- Hero ---------- */
+.jw-hero {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(28px, 4.5vw, 64px);
+  align-items: center;
+  padding: 8px 0 24px;
+}
+.jw-hero-copy {
+  min-width: 0;
+}
+.jw-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent-wash);
+  padding: 7px 13px;
+  border-radius: 999px;
+}
+.jw-hero h1 {
+  margin-top: 18px;
+  font-size: clamp(34px, 3.9vw, 52px);
+  font-weight: 700;
+}
+.jw-lede {
+  margin-top: 16px;
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 42ch;
+}
+.jw-hero-cta {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.jw-trust {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ---------- Ticket ---------- */
+.jw-hero-visual {
+  min-width: 0;
+}
+.jw-ticket {
+  position: relative;
+  z-index: 1;
+  background: var(--card);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 24px;
+  box-shadow: var(--shadow-2);
+}
+.jw-ticket-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 20px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 23px 23px 0 0;
+}
+.jw-ticket-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-size: 14px;
+}
+.jw-ticket-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  opacity: 0.85;
+}
+.jw-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 18px 20px 6px;
+}
+.jw-end {
+  min-width: 0;
+}
+.jw-end.right {
+  text-align: right;
+}
+.jw-code {
+  font-size: clamp(28px, 3.4vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--accent-ink);
+  line-height: 1;
+}
+.jw-end.right .jw-code {
+  color: var(--ink);
+}
+.jw-city {
+  margin-top: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.jw-flightpath {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.jw-pathwrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.jw-path-svg {
+  width: clamp(72px, 9vw, 108px);
+  height: auto;
+  color: var(--accent);
+}
+.jw-plane {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -62%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--hairline-strong);
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-1);
+}
+.jw-flight-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.jw-perf {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 14px 0 2px;
+}
+.jw-perf::before,
+.jw-perf::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--hairline-strong);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.jw-perf::before {
+  left: -11px;
+}
+.jw-perf::after {
+  right: -11px;
+}
+.jw-perf-line {
+  flex: 1;
+  margin: 0 22px;
+  border-top: 2px dashed var(--hairline-strong);
+  position: relative;
+}
+.jw-perf-wing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--hairline-strong);
+  display: grid;
+  place-items: center;
+  color: var(--accent-ink);
+}
+
+/* ticket form */
+.jw-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 14px 20px 20px;
+}
+.jw-form .jw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.jw-form .jw-field-date {
+  grid-column: 1 / 2;
+}
+.jw-create {
+  grid-column: 2 / 3;
+  align-self: end;
+  width: 100%;
+  min-height: 46px;
+}
+
+/* Style the shared CitySearch + inputs inside the ticket */
+.landing .citysearch .eyebrow {
+  font-family: 'DM Sans', var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--ink-soft);
+}
+.landing .input {
+  font-family: 'DM Sans', var(--sans);
+  border: 1px solid var(--hairline-strong);
+  background: var(--paper-2);
+  border-radius: 13px;
+  padding: 11px 13px;
+  font-size: 14px;
+  color: var(--ink);
+  min-height: 46px;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+}
+.landing .input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: #fff;
+  box-shadow: 0 0 0 4px var(--accent-wash);
+}
+.landing .picked {
+  border: 1px solid var(--hairline-strong);
+  border-radius: 13px;
+  background: var(--paper-2);
+  min-height: 46px;
+}
+.landing .picked .x {
+  color: var(--muted);
+}
+.landing .citysearch .results {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--shadow-2);
+}
+
+/* ---------- Recovery strip ---------- */
+.jw-preview {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--accent-wash);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  padding: 14px 18px;
+}
+.jw-preview-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.jw-preview-shift {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.jw-shift-value {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--accent-ink);
+  line-height: 1;
+}
+.jw-shift-dir {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.jw-level {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.jw-level svg {
+  color: var(--accent-ink);
+}
+.jw-indicators {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+}
+.jw-ind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.jw-ind svg {
+  color: var(--accent-ink);
+}
+
+/* ---------- Footer ---------- */
+.jw-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 980px) {
+  .landing {
+    min-height: 0;
+  }
+  .jw-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .jw-hero-visual {
+    max-width: 540px;
+  }
+}
+
+@media (max-width: 720px) {
+  .jw-nav-links {
+    display: none;
+  }
+  .jw-form {
+    grid-template-columns: 1fr;
+  }
+  .jw-form .jw-field-date,
+  .jw-create {
+    grid-column: 1 / -1;
+  }
+  .jw-route {
+    grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .jw-code {
+    font-size: 28px;
+  }
+  .jw-city {
+    font-size: 13px;
+    white-space: normal;
+  }
+  .jw-level {
+    margin-left: 0;
+  }
+  .jw-foot {
+    justify-content: center;
+    text-align: center;
+  }
+}

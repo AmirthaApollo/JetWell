@@ -1,18 +1,24 @@
+import { placeOf, regionOf } from './timezones';
+import { EXTRA_CITIES } from './cities.extra';
+
 export type City = {
   id: string;
   city: string;
   country: string;
   code: string; // IATA-ish 3 letter code
   tz: string; // IANA
-  lat: number;
-  lon: number;
+  lat?: number;
+  lon?: number;
+  /** True for user-added places that are not in the built-in list. */
+  custom?: boolean;
 };
 
 /**
- * ~80 major cities with IANA time zones so the app works fully offline.
- * Offsets are computed at request time via Intl, so DST is always correct.
+ * Core curated city list. Thousands more airports, capitals and hubs live in
+ * cities.extra.ts and are merged below. Offsets are computed at request time
+ * via Intl, so DST is always correct.
  */
-export const CITIES: City[] = [
+const BASE_CITIES: City[] = [
   { id: 'del', city: 'Delhi', country: 'India', code: 'DEL', tz: 'Asia/Kolkata', lat: 28.61, lon: 77.21 },
   { id: 'bom', city: 'Mumbai', country: 'India', code: 'BOM', tz: 'Asia/Kolkata', lat: 19.09, lon: 72.88 },
   { id: 'blr', city: 'Bengaluru', country: 'India', code: 'BLR', tz: 'Asia/Kolkata', lat: 12.97, lon: 77.59 },
@@ -99,10 +105,14 @@ export const CITIES: City[] = [
   { id: 'hnd', city: 'Honolulu', country: 'United States', code: 'HNL', tz: 'Pacific/Honolulu', lat: 21.31, lon: -157.86 },
 ];
 
-export function searchCities(query: string, limit = 7): City[] {
+/** Everything the app can search: curated core + worldwide airports/capitals. */
+export const CITIES: City[] = [...BASE_CITIES, ...EXTRA_CITIES];
+
+export function searchCities(query: string, extras: City[] = [], limit = 7): City[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
-  const scored = CITIES.map((c) => {
+  const pool = extras.length ? [...extras, ...CITIES] : CITIES;
+  const scored = pool.map((c) => {
     const city = c.city.toLowerCase();
     const country = c.country.toLowerCase();
     const code = c.code.toLowerCase();
@@ -119,6 +129,66 @@ export function searchCities(query: string, limit = 7): City[] {
   return scored.slice(0, limit).map((x) => x.c);
 }
 
-export function findCity(id: string): City | undefined {
-  return CITIES.find((c) => c.id === id);
+export function findCity(id: string, extras: City[] = []): City | undefined {
+  return CITIES.find((c) => c.id === id) ?? extras.find((c) => c.id === id);
+}
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function codeFromName(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters = name.replace(/[^a-zA-Z]/g, '').toUpperCase();
+  if (words.length >= 2) {
+    const initials = words.map((w) => w[0]).join('').replace(/[^a-zA-Z]/g, '').toUpperCase();
+    if (initials.length >= 3) return initials.slice(0, 3);
+    if (initials.length === 2) return initials + 'X';
+  }
+  if (letters.length >= 3) return letters.slice(0, 3);
+  return (letters + 'XXX').slice(0, 3);
+}
+
+/** Build a place from a typed name and a chosen IANA zone, so any destination works. */
+export function makeCustomCity(name: string, tz: string): City {
+  const trimmed = name.trim();
+  const city = trimmed.replace(/\b\w/g, (m) => m.toUpperCase());
+  return {
+    id: `custom:${slugify(city)}:${slugify(tz)}`,
+    city,
+    country: regionOf(tz),
+    code: codeFromName(city),
+    tz,
+    custom: true,
+  };
+}
+
+/** A friendly label for a zone's offset today, used in the timezone picker. */
+export function timezoneCityLabel(tz: string): string {
+  return placeOf(tz);
+}
+
+/** Great-circle distance in km, or null when either city lacks coordinates. */
+export function distanceKm(a: City, b: City): number | null {
+  if (typeof a.lat !== 'number' || typeof a.lon !== 'number') return null;
+  if (typeof b.lat !== 'number' || typeof b.lon !== 'number') return null;
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Rough block time in minutes: cruise at ~850 km/h plus taxi and climb. */
+export function estimateFlightMinutes(a: City, b: City): number | null {
+  const km = distanceKm(a, b);
+  if (km == null) return null;
+  return Math.max(45, Math.round((km / 850) * 60 + 45));
 }

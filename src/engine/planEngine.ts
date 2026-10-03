@@ -50,6 +50,8 @@ export interface TripInput {
   layovers?: LayoverInput[];
   /** @deprecated single-connection form, kept for compatibility */
   layover?: LayoverInput | null;
+  /** Fixed commitments after landing, in destination local time. */
+  schedule?: ScheduleItem[];
 }
 
 export interface PlanItem {
@@ -584,6 +586,32 @@ export function buildPlan(input: TripInput): Plan {
       highlight: inLow,
     });
   }
+
+  // --- Commitments -------------------------------------------------------
+  // Fixed events the traveller added (destination local time). They appear in
+  // the timeline and any that fall in the body's night are highlighted.
+  for (const it of input.schedule ?? []) {
+    const at = scheduleItemInstant(it, arrival, destTz);
+    const home = getZonedParts(new Date(at), originTz);
+    const homeMin = home.hour * 60 + home.minute;
+    const bioNight = homeMin >= 23 * 60 || homeMin < 6 * 60;
+    after.push({
+      id: `commit-${it.id}`,
+      phase: 'after',
+      kind: 'note',
+      title: it.title,
+      why: bioNight
+        ? `A fixed commitment, around ${formatTime(new Date(at), originTz)} at home — in your biological night.`
+        : 'A fixed commitment. Your plan is arranged so the essentials still land around it.',
+      more: bioNight
+        ? 'Take a short nap beforehand, keep water nearby, and get daylight before it if you can.'
+        : 'Keep the plan items around it in mind and get light at the recommended times.',
+      at,
+      durationMin: Math.max(0, it.endMin - it.startMin),
+      highlight: bioNight,
+    });
+  }
+  after.sort((a, b) => a.at - b.at);
 
   // --- Assemble ----------------------------------------------------------
   const phases = { before, air, after };
